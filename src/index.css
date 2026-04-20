@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-green: #00ffcc;
+  --color-terminal-black: #050505;
+}
+@layer utilities {
+  .text-shadow-glow {
+    text-shadow: 0 0 5px var(--color-neon-green);
+  }
+}
+
+/* Prevents scrolling and sets the pitch-black void */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-terminal-black);
+  color: var(--color-neon-green);
+  font-family: 'Courier New', Courier, monospace;
+}
