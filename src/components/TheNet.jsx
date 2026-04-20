@@ -93,7 +93,7 @@ export function TheNet({ onJackOut }) {
 
     const iceEntities = world.with('isIce').entities;
     const addLog = useTerminalStore.getState().addLog;
-    const { int, interfaceLvl, takeDamage, health } = useMeatspaceStore.getState();
+    const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
     const activeProgram = useCyberdeckStore.getState().activeProgram;
 
     iceEntities.forEach(ice => {
@@ -113,18 +113,14 @@ export function TheNet({ onJackOut }) {
         addLog(`> ICE ATTACK: D10(${iceRoll}) + STR(${iceStr}) = ${attackTotal}`);
         addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${progStr}) = ${defenseTotal}`);
 
-        // NEW: Lethal Damage Logic
         if (attackTotal > defenseTotal) {
-             // Roll 1D3 for Neural Damage
              const damage = Math.floor(Math.random() * 3) + 1; 
              addLog(`> CRITICAL: YOU TOOK ${damage} NEURAL DAMAGE FROM ${ice.name.toUpperCase()}!`);
              
              takeDamage(damage);
 
-             // Flatline Check
              if (useMeatspaceStore.getState().health === 0) {
                  addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
-                 // Force the player out of the Net after a 1.5 second delay so they can read the message
                  setTimeout(() => onJackOut(), 1500); 
              }
 
@@ -208,6 +204,7 @@ export function TheNet({ onJackOut }) {
 
       if (!activeProgram) {
         addLog("> CODE GATE DETECTED. SELECT A PROGRAM TO BYPASS.");
+        turnSpent = true;
       } else if (activeProgram.type === 'utility') {
         addLog(`> EXECUTING ${activeProgram.name.toUpperCase()}...`);
         world.remove(hitCodeGate);
@@ -215,6 +212,7 @@ export function TheNet({ onJackOut }) {
         turnSpent = true;
       } else {
         addLog(`> ERROR: ${activeProgram.name.toUpperCase()} IS NOT A DECRYPTION UTILITY.`);
+        turnSpent = true;
       }
     }
 
@@ -233,39 +231,36 @@ export function TheNet({ onJackOut }) {
 
       if (!activeProgram) {
         addLog(`> WARNING: ${hitIce.name.toUpperCase()} DETECTED. NO COMBAT PROGRAM SELECTED!`);
-        return; 
-      }
-
-      if (activeProgram.type !== 'anti-ice') {
+        turnSpent = true; 
+      } else if (activeProgram.type !== 'anti-ice') {
         addLog(`> ERROR: ${activeProgram.name.toUpperCase()} IS INEFFECTIVE AGAINST BLACK ICE.`);
-        return; 
-      }
-
-      addLog(`> INITIATING COMBAT SEQUENCE WITH ${activeProgram.name.toUpperCase()}...`);
-      
-      const playerRoll = Math.floor(Math.random() * 10) + 1;
-      const iceRoll = Math.floor(Math.random() * 10) + 1;
-      const programStr = activeProgram.strength; 
-      const iceStr = hitIce.name === 'Pit Bull' ? 3 : 5; 
-      
-      const { int, interfaceLvl } = useMeatspaceStore.getState();
-      const attackTotal = playerRoll + int + interfaceLvl + programStr;
-      const defenseTotal = iceRoll + iceStr;
-
-      addLog(`> ${activeProgram.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${programStr}) = ${attackTotal}`);
-      addLog(`> TARGET DEFENSE: D10(${iceRoll}) + STR(${iceStr}) = ${defenseTotal}`);
-
-      if (attackTotal > defenseTotal) {
-        addLog("> BREACH SUCCESSFUL. TARGET DEREZZED.");
-        world.remove(hitIce);
+        turnSpent = true; 
       } else {
-        addLog("> ATTACK FAILED. WARNING: ICE COUNTER-TRACE DETECTED.");
+        addLog(`> INITIATING COMBAT SEQUENCE WITH ${activeProgram.name.toUpperCase()}...`);
+        
+        const playerRoll = Math.floor(Math.random() * 10) + 1;
+        const iceRoll = Math.floor(Math.random() * 10) + 1;
+        const programStr = activeProgram.strength; 
+        const iceStr = hitIce.name === 'Pit Bull' ? 3 : 5; 
+        
+        const { int, interfaceLvl } = useMeatspaceStore.getState();
+        const attackTotal = playerRoll + int + interfaceLvl + programStr;
+        const defenseTotal = iceRoll + iceStr;
+
+        addLog(`> ${activeProgram.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${programStr}) = ${attackTotal}`);
+        addLog(`> TARGET DEFENSE: D10(${iceRoll}) + STR(${iceStr}) = ${defenseTotal}`);
+
+        if (attackTotal > defenseTotal) {
+          addLog("> BREACH SUCCESSFUL. TARGET DEREZZED.");
+          world.remove(hitIce);
+        } else {
+          addLog("> ATTACK FAILED. WARNING: ICE COUNTER-TRACE DETECTED.");
+        }
+        turnSpent = true;
       }
-      turnSpent = true;
     }
 
     if (turnSpent) {
-      // Don't let ICE attack if the player is already dead
       if (useMeatspaceStore.getState().health > 0) {
           executeEnemyTurn();
       }
