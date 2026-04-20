@@ -1,26 +1,29 @@
 // src/machine/gamePhaseMachine.js
 import { setup } from 'xstate';
 
-export const gamePhaseMachine = setup({
-  // This is where we will eventually define our TTRPG actions, but for now, it's just the phase routing
-}).createMachine({
+export const gamePhaseMachine = setup({}).createMachine({
   id: 'gamePhase',
-  initial: 'safehouse', // The game always starts here
+  initial: 'safehouse', 
   states: {
     safehouse: {
+      on: { 
+        OPEN_NAVIGATOR: { target: 'navigator' } // This MUST match the button!
+      }
+    },
+    navigator: {
       on: {
-        JACK_IN: { target: 'jacking_in' }
+        INITIATE_LINK: { target: 'jacking_in' },
+        CANCEL: { target: 'safehouse' }
       }
     },
     jacking_in: {
-      on: {
-        // Once the cutscene finishes, it sends this signal
+      on: { 
         CONNECTION_ESTABLISHED: { target: 'net' } 
       }
     },
     net: {
-      on: {
-        JACK_OUT: { target: 'safehouse' }
+      on: { 
+        JACK_OUT: { target: 'safehouse' } 
       }
     }
   }
