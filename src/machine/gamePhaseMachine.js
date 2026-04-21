@@ -1,4 +1,3 @@
-// src/machine/gamePhaseMachine.js
 import { setup } from 'xstate';
 
 export const gamePhaseMachine = setup({}).createMachine({
@@ -7,7 +6,13 @@ export const gamePhaseMachine = setup({}).createMachine({
   states: {
     safehouse: {
       on: { 
-        OPEN_NAVIGATOR: { target: 'navigator' } // This MUST match the button!
+        OPEN_NAVIGATOR: { target: 'navigator' },
+        OPEN_SHOP: { target: 'shop' } // NEW ROUTE
+      }
+    },
+    shop: {
+      on: {
+        LEAVE_SHOP: { target: 'safehouse' }
       }
     },
     navigator: {
