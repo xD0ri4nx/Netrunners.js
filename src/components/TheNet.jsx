@@ -3,7 +3,11 @@ import { world } from '../ecs/world';
 import { useTerminalStore } from '../store/terminalStore';
 import { useCyberdeckStore } from '../store/cyberdeckStore';
 import { useMeatspaceStore } from '../store/meatspaceStore';
+import { useMissionStore } from '../store/missionStore';
+import { useRoutingStore } from '../store/routingStore';
 import { sfx } from '../utils/sfx';
+// NEW: Import the zoom library
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const GRID_SIZE = 15;
 
@@ -14,7 +18,6 @@ export function TheNet({ onJackOut }) {
     world.clear();
     const fortMap = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('SPACE'));
 
-    // FIX: Increased minimum dimensions to prevent chokepoints
     const w1 = Math.floor(Math.random() * 3) + 7; 
     const h1 = Math.floor(Math.random() * 3) + 7; 
     const x1 = Math.floor(Math.random() * (11 - w1)) + 2; 
@@ -83,7 +86,6 @@ export function TheNet({ onJackOut }) {
        world.add({ position: floors.pop(), render: { char: 'C', color: 'text-purple-500 animate-pulse' }, isCPU: true, isWall: true });
     }
 
-    // FIX: Reduced max spawns to prevent overcrowding
     const numMemory = Math.floor(Math.random() * 2) + 1; 
     for(let i = 0; i < numMemory; i++) {
        if (floors.length === 0) break;
@@ -121,10 +123,8 @@ export function TheNet({ onJackOut }) {
         const iceStr = ice.name === 'Pit Bull' ? 3 : ice.name === 'Bloodhound' ? 4 : 5;
         const progStr = activeProgram ? activeProgram.strength : 0;
         
-        // --- TRACE PENALTY APPLIED HERE ---
         const traceMod = useRoutingStore.getState().totalTrace;
 
-        // Ice gets stronger based on how much Trace you accumulated routing!
         const attackTotal = iceRoll + iceStr + traceMod;
         const defenseTotal = playerRoll + int + interfaceLvl + progStr;
 
@@ -244,12 +244,23 @@ export function TheNet({ onJackOut }) {
 
     if (hitMemory) {
       sfx.loot();
-      useTerminalStore.getState().addLog("> MEMORY UNIT ACCESSED. DOWNLOADING PAYLOAD...");
-      useTerminalStore.getState().addLog("> ACQUIRED: 500 Eurobucks & Encrypted Corp File.");
-      useMeatspaceStore.getState().addFunds(500);
+      
+      const missionStore = useMissionStore.getState();
+      const currentLdl = useRoutingStore.getState().currentLdl;
+      const addLog = useTerminalStore.getState().addLog;
+      
+      if (missionStore.activeJob && !missionStore.payloadSecured && currentLdl === missionStore.activeJob.targetLdl) {
+        addLog(`> TARGET IDENTIFIED. DOWNLOADING: ${missionStore.activeJob.title}...`);
+        addLog(`> MISSION CRITICAL FILE SECURED. JACK OUT TO CLAIM PAYOUT.`);
+        missionStore.securePayload();
+      } else {
+        addLog("> MEMORY UNIT ACCESSED. DOWNLOADING PAYLOAD...");
+        addLog("> ACQUIRED: 500 Eurobucks & Encrypted Corp File.");
+        useMeatspaceStore.getState().addFunds(500);
+      }
+      
       hitMemory.render.color = 'text-gray-700'; 
       hitMemory.isMemory = false; 
-      // FIX: Remove isWall so the player can walk through the dead memory unit
       hitMemory.isWall = false; 
       turnSpent = true;
     }
@@ -305,41 +316,68 @@ export function TheNet({ onJackOut }) {
   const renderableEntities = world.with('position', 'render');
 
   return (
-    <div className="flex flex-col items-center w-full h-full justify-center">
-      <div 
-        className="grid gap-[1px] bg-green-900/20 border-2 border-neon-green/50 p-1 shadow-[0_0_20px_#00ffcc20]"
-        style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1.5rem)`, gridTemplateRows: `repeat(${GRID_SIZE}, 1.5rem)` }}
+    <div className="flex flex-col items-center w-full h-full relative overflow-hidden">
+      
+      {/* NEW: Pan & Zoom Wrapper */}
+      <TransformWrapper
+        initialScale={1}
+        minScale={0.5}
+        maxScale={3}
+        centerOnInit={true}
+        wheel={{ step: 0.1 }}
+        pinch={{ step: 5 }}
       >
-        {Array.from({ length: GRID_SIZE }).map((_, y) => 
-          Array.from({ length: GRID_SIZE }).map((_, x) => {
-            const entityHere = renderableEntities.entities.find(e => e.position.x === x && e.position.y === y);
-            const player = world.with('isPlayer').entities[0];
-            const isAdjacent = player && (Math.abs(x - player.position.x) + Math.abs(y - player.position.y) === 1);
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            {/* UI Overlay Controls */}
+            <div className="absolute top-2 right-2 z-50 flex gap-2 opacity-70 hover:opacity-100">
+              <button className="bg-black/80 border border-neon-green text-neon-green w-8 h-8 font-bold" onClick={() => zoomIn()}>+</button>
+              <button className="bg-black/80 border border-neon-green text-neon-green w-8 h-8 font-bold" onClick={() => zoomOut()}>-</button>
+              <button className="bg-black/80 border border-neon-green text-neon-green px-2 h-8 font-bold text-xs" onClick={() => resetTransform()}>RESET</button>
+            </div>
 
-            return (
+            <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full flex items-center justify-center">
               <div 
-                key={`${x}-${y}`} 
-                onClick={() => handleCellClick(x, y)}
-                className={`w-6 h-6 flex items-center justify-center border border-green-900/30 font-bold select-none
-                  ${isAdjacent && !entityHere ? 'cursor-pointer hover:bg-neon-green/20' : ''}
-                  ${isAdjacent && entityHere ? 'cursor-crosshair hover:bg-red-500/20' : ''}
-                  ${!isAdjacent ? 'bg-black/80' : 'bg-black'}
-                `}
+                className="grid gap-[1px] bg-green-900/20 border-2 border-neon-green/50 p-1 shadow-[0_0_20px_#00ffcc20]"
+                style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1.5rem)`, gridTemplateRows: `repeat(${GRID_SIZE}, 1.5rem)` }}
               >
-                {entityHere ? (
-                  <span className={`${entityHere.render.color} text-shadow-glow pointer-events-none`}>{entityHere.render.char}</span>
-                ) : (
-                  <span className="text-green-900/20 pointer-events-none">.</span> 
+                {Array.from({ length: GRID_SIZE }).map((_, y) => 
+                  Array.from({ length: GRID_SIZE }).map((_, x) => {
+                    const entityHere = renderableEntities.entities.find(e => e.position.x === x && e.position.y === y);
+                    const player = world.with('isPlayer').entities[0];
+                    const isAdjacent = player && (Math.abs(x - player.position.x) + Math.abs(y - player.position.y) === 1);
+
+                    return (
+                      <div 
+                        key={`${x}-${y}`} 
+                        onClick={() => handleCellClick(x, y)}
+                        className={`w-6 h-6 flex items-center justify-center border border-green-900/30 font-bold select-none
+                          ${isAdjacent && !entityHere ? 'cursor-pointer hover:bg-neon-green/20' : ''}
+                          ${isAdjacent && entityHere ? 'cursor-crosshair hover:bg-red-500/20' : ''}
+                          ${!isAdjacent ? 'bg-black/80' : 'bg-black'}
+                        `}
+                      >
+                        {entityHere ? (
+                          <span className={`${entityHere.render.color} text-shadow-glow pointer-events-none`}>{entityHere.render.char}</span>
+                        ) : (
+                          <span className="text-green-900/20 pointer-events-none">.</span> 
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
-            );
-          })
+            </TransformComponent>
+          </>
         )}
-      </div>
+      </TransformWrapper>
 
-      <button onClick={onJackOut} className="mt-8 border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors">
-        [ EMERGENCY JACK OUT ]
-      </button>
+      {/* Jack Out Button - Kept outside the zoom wrapper so it stays fixed to the bottom */}
+      <div className="absolute bottom-4 z-50">
+        <button onClick={onJackOut} className="bg-black border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors font-bold text-sm sm:text-base shadow-2xl">
+          [ EMERGENCY JACK OUT ]
+        </button>
+      </div>
     </div>
   );
 }
