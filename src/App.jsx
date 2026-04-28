@@ -14,7 +14,6 @@ export default function App() {
   const [state, send] = useMachine(gamePhaseMachine);
   const [bootLog, setBootLog] = useState([]);
   
-  // NEW: Mobile Panel Toggles
   const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
 
@@ -27,13 +26,19 @@ export default function App() {
   const handleAction = (type) => {
     sfx.click();
     send({ type });
-    // Auto-close mobile menus when taking an action
     setShowLeftPanel(false); 
     setShowRightPanel(false);
   };
 
   useEffect(() => {
     if (state.matches('safehouse')) {
+      const currentTrace = useRoutingStore.getState().totalTrace;
+      if (currentTrace >= 20) {
+        sfx.error();
+        send({ type: 'TRIGGER_RAID' });
+        return; 
+      }
+
       useMeatspaceStore.getState().heal();
       resetRoute(); 
 
@@ -83,7 +88,7 @@ export default function App() {
 
   const handlePurchase = (itemType, cost, payload) => {
     const { funds, deductFunds } = useMeatspaceStore.getState();
-    const { addProgram, upgradeMu, programs } = useCyberdeckStore.getState();
+    const { addProgram, upgradeMu, programs, equipDeck, deckModel } = useCyberdeckStore.getState();
     const addLog = useTerminalStore.getState().addLog;
 
     if (funds < cost) {
@@ -110,21 +115,32 @@ export default function App() {
       sfx.loot();
       addLog(`> TRANSACTION COMPLETE: CYBERDECK MU UPGRADED.`);
     }
+
+    if (itemType === 'deck') {
+      if (deckModel === payload.model) {
+        sfx.error();
+        addLog("> ERROR: DECK ALREADY OWNED.");
+        return;
+      }
+      deductFunds(cost);
+      equipDeck(payload.model, payload.mu, payload.bonus);
+      sfx.loot();
+      addLog(`> TRANSACTION COMPLETE: ${payload.model.toUpperCase()} ONLINE.`);
+    }
   };
 
   return (
-    // FIX: Changed to Flex on mobile, Grid on desktop (md:)
     <div className="h-screen w-screen bg-terminal-black text-neon-green flex flex-col md:grid md:grid-cols-[280px_1fr_280px] lg:grid-cols-[300px_1fr_300px] md:grid-rows-[1fr_150px] overflow-hidden crt-flicker relative">
-      <div className="crt-overlay pointer-events-none"></div>
+      <div className="crt-overlay pointer-events-none z-50"></div>
 
-      {/* MOBILE HEADER (Only visible on small screens) */}
+      {/* MOBILE HEADER */}
       <div className="md:hidden flex justify-between items-center p-3 border-b border-neon-green/30 bg-black z-40 text-xs sm:text-sm font-bold tracking-widest">
          <button onClick={() => {setShowLeftPanel(!showLeftPanel); setShowRightPanel(false);}} className="border border-neon-green px-2 py-1 active:bg-neon-green active:text-black">[ MEATSPACE ]</button>
          <span className="text-red-500 animate-pulse">SYS_OS</span>
          <button onClick={() => {setShowRightPanel(!showRightPanel); setShowLeftPanel(false);}} className="border border-neon-green px-2 py-1 active:bg-neon-green active:text-black">[ CYBERDECK ]</button>
       </div>
       
-      {/* LEFT PANEL: MEATSPACE (Slide-out drawer on mobile, static column on desktop) */}
+      {/* LEFT PANEL: MEATSPACE */}
       <div className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-black/95 border-r border-neon-green/30 p-4 flex flex-col gap-4 z-50 transform transition-transform duration-300 overflow-y-auto shadow-2xl md:relative md:translate-x-0 md:w-auto md:bg-black/80 md:col-start-1 md:row-start-1 md:shadow-none
         ${showLeftPanel ? 'translate-x-0' : '-translate-x-full'}`}>
         
@@ -157,6 +173,44 @@ export default function App() {
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#00ffcc_1px,transparent_1px),linear-gradient(to_bottom,#00ffcc_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
         <div className="relative text-center w-full flex justify-center pointer-events-auto h-full items-center overflow-y-auto">
           
+          {state.matches('raid') && (
+             <div className="flex flex-col items-center justify-center w-full max-w-lg bg-black/90 border-4 border-red-600 p-6 shadow-[0_0_50px_#dc262680]">
+               <h1 className="text-3xl sm:text-4xl font-bold bg-red-600 text-black w-full py-2 tracking-widest mb-4 animate-pulse">NETWATCH RAID</h1>
+               <p className="text-sm sm:text-base mb-4 text-red-400">WARNING: CRITICAL TRACE THRESHOLD EXCEEDED.</p>
+               <p className="text-sm sm:text-base mb-6">Corporate security has triangulated your physical IP address. Heavily armed Netwatch operatives are breaching the Safehouse door.</p>
+               
+               <div className="flex flex-col gap-4 w-full">
+                 <button 
+                   onClick={() => {
+                     if (meatspace.funds >= 2000) {
+                        meatspace.deductFunds(2000);
+                        resetRoute(); 
+                        sfx.loot();
+                        useTerminalStore.getState().addLog(`> FUNDS TRANSFERRED. NEW SIN GENERATED. CRISIS AVERTED.`);
+                        send({ type: 'SURVIVED_RAID' });
+                     } else {
+                        sfx.error();
+                        useTerminalStore.getState().addLog("> ERROR: INSUFFICIENT FUNDS FOR BRIBE.");
+                     }
+                   }}
+                   className="bg-black text-yellow-400 border-2 border-yellow-400 p-4 hover:bg-yellow-400 hover:text-black font-bold transition-all text-sm sm:text-base"
+                 >
+                   [ BURN SIN & BRIBE COPS (2000 eb) ]
+                 </button>
+                 <button 
+                   onClick={() => {
+                     sfx.flatline();
+                     localStorage.clear(); 
+                     window.location.reload(); 
+                   }}
+                   className="bg-black text-red-500 border border-red-500/50 p-4 hover:bg-red-500 hover:text-black font-bold transition-all text-sm sm:text-base"
+                 >
+                   [ SURRENDER (PERMANENT SAVE WIPE) ]
+                 </button>
+               </div>
+             </div>
+          )}
+
           {state.matches('safehouse') && (
             <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-sm px-4">
               <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4 animate-pulse text-red-500 tracking-widest">SYSTEM READY</h1>
@@ -165,10 +219,10 @@ export default function App() {
               </button>
               <div className="flex flex-col sm:flex-row gap-4 w-full">
                 <button onClick={() => handleAction('OPEN_JOBS')} className="bg-black text-blue-400 w-full px-4 py-3 border border-blue-400/50 hover:bg-blue-400 hover:text-black transition-all cursor-pointer">
-                  [ FIXER JOBS ]
+                  [FIXER JOBS]
                 </button>
                 <button onClick={() => handleAction('OPEN_SHOP')} className="bg-black text-neon-green w-full px-4 py-3 border border-neon-green/50 hover:bg-neon-green hover:text-black transition-all cursor-pointer">
-                  [ BLACK MARKET ]
+                  [BLACK MARKET]
                 </button>
               </div>
             </div>
@@ -221,7 +275,9 @@ export default function App() {
           {state.matches('shop') && (
              <div className="flex flex-col items-center w-full max-w-2xl max-h-full overflow-y-auto bg-black/90 border-2 border-neon-green p-4 sm:p-6 shadow-[0_0_30px_#00ffcc40]">
               <h2 className="text-lg sm:text-2xl font-bold mb-4 border-b border-neon-green w-full text-center pb-2 tracking-widest text-yellow-400">BBS: AFTERLIFE</h2>
-              <div className="w-full flex flex-col gap-4 mb-4 font-mono text-left">
+              
+              <p className="w-full text-left text-sm opacity-70 border-b border-neon-green/30 pb-1 mb-3">SOFTWARE & CHIPS</p>
+              <div className="w-full flex flex-col gap-3 mb-6 font-mono text-left">
                 <div className="border border-neon-green/30 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group hover:bg-neon-green/10 transition-colors">
                   <div>
                     <span className="font-bold text-base sm:text-lg text-red-400">Killer v2.0 (Anti-ICE)</span> 
@@ -231,6 +287,18 @@ export default function App() {
                     [ BUY: 800 eb ]
                   </button>
                 </div>
+                
+                {/* NEW: Stealth Program */}
+                <div className="border border-neon-green/30 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group hover:bg-neon-green/10 transition-colors">
+                  <div>
+                    <span className="font-bold text-base sm:text-lg text-teal-400">Invisibility (Stealth)</span> 
+                    <p className="text-xs opacity-70 mt-1">Evade ICE to slip past without combat. STR: 5.</p>
+                  </div>
+                  <button onClick={() => handlePurchase('program', 1500, { id: 'prog_invis', name: 'Invisibility', type: 'stealth', strength: 5 })} className="border border-yellow-400 text-yellow-400 px-4 py-2 hover:bg-yellow-400 hover:text-black cursor-pointer font-bold w-full sm:w-auto text-sm">
+                    [ BUY: 1500 eb ]
+                  </button>
+                </div>
+
                 <div className="border border-neon-green/30 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group hover:bg-neon-green/10 transition-colors">
                   <div>
                     <span className="font-bold text-base sm:text-lg text-blue-400">Memory Expansion Chip</span> 
@@ -241,6 +309,29 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              <p className="w-full text-left text-sm opacity-70 border-b border-neon-green/30 pb-1 mb-3">HARDWARE: CYBERDECKS</p>
+              <div className="w-full flex flex-col gap-3 mb-4 font-mono text-left">
+                <div className="border border-neon-green/30 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group hover:bg-neon-green/10 transition-colors">
+                  <div>
+                    <span className="font-bold text-base sm:text-lg text-purple-400">Fuchi Cyber-4</span> 
+                    <p className="text-xs opacity-70 mt-1">Base MU: 10 | Combat Bonus: +1</p>
+                  </div>
+                  <button onClick={() => handlePurchase('deck', 5000, { model: 'Fuchi Cyber-4', mu: 10, bonus: 1 })} className="border border-yellow-400 text-yellow-400 px-4 py-2 hover:bg-yellow-400 hover:text-black cursor-pointer font-bold w-full sm:w-auto text-sm">
+                    [ BUY: 5,000 eb ]
+                  </button>
+                </div>
+                <div className="border border-neon-green/30 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group hover:bg-neon-green/10 transition-colors">
+                  <div>
+                    <span className="font-bold text-base sm:text-lg text-yellow-400">Raven Microcyber</span> 
+                    <p className="text-xs opacity-70 mt-1">Base MU: 15 | Combat Bonus: +2</p>
+                  </div>
+                  <button onClick={() => handlePurchase('deck', 10000, { model: 'Raven Microcyber', mu: 15, bonus: 2 })} className="border border-yellow-400 text-yellow-400 px-4 py-2 hover:bg-yellow-400 hover:text-black cursor-pointer font-bold w-full sm:w-auto text-sm">
+                    [ BUY: 10,000 eb ]
+                  </button>
+                </div>
+              </div>
+
               <div className="flex w-full justify-start border-t border-neon-green/30 pt-4 mt-auto">
                 <button onClick={() => handleAction('LEAVE_SHOP')} className="border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors w-full sm:w-auto">
                   [ DISCONNECT ]
@@ -270,7 +361,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* RIGHT PANEL: CYBERDECK (Slide-out drawer on mobile, static column on desktop) */}
+      {/* RIGHT PANEL: CYBERDECK */}
       <div className={`fixed inset-y-0 right-0 w-4/5 max-w-sm bg-black/95 border-l border-neon-green/30 p-4 flex flex-col gap-4 z-50 transform transition-transform duration-300 overflow-y-auto shadow-2xl md:relative md:translate-x-0 md:w-auto md:bg-black/80 md:col-start-3 md:row-start-1 md:shadow-none
         ${showRightPanel ? 'translate-x-0' : 'translate-x-full'}`}>
         
@@ -280,6 +371,9 @@ export default function App() {
         </div>
         <p>&gt; MODEL: {cyberdeck.deckModel}</p>
         <p>&gt; MEMORY: {cyberdeck.usedMu} / {cyberdeck.maxMu} MU</p>
+        {cyberdeck.combatBonus > 0 && (
+           <p className="text-yellow-400 font-bold">&gt; DECK COMBAT BONUS: +{cyberdeck.combatBonus}</p>
+        )}
         <div className="mt-4">
           <p className="mb-2 text-sm opacity-70">LOADED PROGRAMS (CLICK TO EQUIP):</p>
           <ul className="space-y-2">
@@ -303,7 +397,7 @@ export default function App() {
       <div className="h-40 md:h-auto border-t border-neon-green/30 p-2 sm:p-4 md:col-span-3 md:row-start-2 font-mono text-[10px] sm:text-sm overflow-y-auto flex flex-col justify-end bg-black z-20">
         <div className="opacity-70 flex flex-col justify-end min-h-full">
           {terminalLogs.map((log, index) => (
-            <p key={index} className={log.includes('WARNING') || log.includes('FAILED') || log.includes('CRITICAL') || log.includes('FLATLINE') || log.includes('ERROR') ? 'text-red-400' : 'text-neon-green'}>
+            <p key={index} className={log.includes('WARNING') || log.includes('FAILED') || log.includes('CRITICAL') || log.includes('FLATLINE') || log.includes('ERROR') || log.includes('RAID') ? 'text-red-400' : 'text-neon-green'}>
               {log}
             </p>
           ))}

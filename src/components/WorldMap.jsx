@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useRoutingStore } from '../store/routingStore';
 import { useTerminalStore } from '../store/terminalStore';
 import { LDL_DATABASE } from '../data/ldlDatabase';
 import { sfx } from '../utils/sfx';
 
 export function WorldMap({ onExecute, onAbort }) {
+  const [activeRegion, setActiveRegion] = useState('na'); // Default to North America
+
   const currentLdl = useRoutingStore(state => state.currentLdl);
   const routeHistory = useRoutingStore(state => state.routeHistory);
   const totalTrace = useRoutingStore(state => state.totalTrace);
@@ -15,11 +18,19 @@ export function WorldMap({ onExecute, onAbort }) {
 
   const ldlNodes = Object.values(LDL_DATABASE);
 
+  const REGION_TABS = [
+    { id: 'na', label: 'N.AMERICA' },
+    { id: 'sa', label: 'S.AMERICA' },
+    { id: 'euro', label: 'EUROPE' },
+    { id: 'asia', label: 'PACIFICA' },
+    { id: 'equat', label: 'EQUATORIAL' },
+    { id: 'space', label: 'DEEP SPACE' }
+  ];
+
   const handleNodeClick = (targetId) => {
     sfx.click();
     const target = LDL_DATABASE[targetId];
 
-    // 1. Start Route
     if (!currentLdl) {
       if (target.region !== 'earth') {
         sfx.error();
@@ -38,7 +49,6 @@ export function WorldMap({ onExecute, onAbort }) {
       return;
     }
 
-    // 2. The 5-Space Rule (5.8 allows for standard TTRPG 4x4 diagonal jumps)
     const distance = Math.sqrt(Math.pow(target.x - current.x, 2) + Math.pow(target.y - current.y, 2));
     if (distance > 5.8) { 
       sfx.error();
@@ -46,14 +56,12 @@ export function WorldMap({ onExecute, onAbort }) {
       return;
     }
 
-    // 3. Orbital Bottlenecks
     if (target.region === 'orbit' && current.region === 'earth' && !current.isEquatorial) {
       sfx.error();
       addLog("> ORBITAL INSERTION DENIED. MUST LAUNCH FROM EQUATORIAL GRID.");
       return;
     }
     
-    // FIX: Deep Space logic now correctly groups Luna and Mars together.
     const targetIsDeepSpace = target.region === 'luna' || target.region === 'mars';
     const currentIsDeepSpace = current.region === 'luna' || current.region === 'mars';
     
@@ -63,7 +71,6 @@ export function WorldMap({ onExecute, onAbort }) {
       return;
     }
 
-    // 4. "Scamming the LDL" - Security Roll
     addLog(`> BYPASSING ${target.name.toUpperCase()} SECURITY (SEC: ${target.sec})...`);
     const roll = Math.floor(Math.random() * 10) + 1;
     
@@ -81,12 +88,25 @@ export function WorldMap({ onExecute, onAbort }) {
 
   return (
     <div className="flex flex-col items-center w-full h-full max-w-4xl bg-black/90 border-2 border-neon-green p-4 shadow-[0_0_30px_#00ffcc40] z-50">
-      <div className="flex justify-between w-full border-b border-neon-green pb-2 mb-4">
-        <h2 className="text-xl font-bold tracking-widest text-shadow-glow">CYBERSMILY NAVIGATOR V1.3</h2>
-        <span className="text-red-500 animate-pulse font-bold">ACTIVE TRACE: {totalTrace}</span>
+      <div className="flex justify-between items-center w-full border-b border-neon-green pb-2 mb-4">
+        <h2 className="text-xl font-bold tracking-widest text-shadow-glow">NAVIGATOR V1.4</h2>
+        <span className="text-red-500 animate-pulse font-bold text-sm sm:text-base">TRACE: {totalTrace}</span>
       </div>
 
-      <div className="relative w-full h-[400px] border border-neon-green/30 bg-green-900/10 overflow-hidden mb-4 rounded">
+      {/* REGION TABS */}
+      <div className="w-full flex flex-wrap gap-2 mb-4">
+        {REGION_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { sfx.click(); setActiveRegion(tab.id); }}
+            className={`flex-1 min-w-[80px] text-[10px] sm:text-xs font-bold px-2 py-1 border transition-colors ${activeRegion === tab.id ? 'bg-neon-green text-black border-neon-green' : 'border-neon-green/30 text-neon-green hover:bg-neon-green/20'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="relative w-full h-[350px] sm:h-[400px] border border-neon-green/30 bg-green-900/10 overflow-hidden mb-4 rounded">
         
         {/* Route Lines Layer */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
@@ -109,47 +129,53 @@ export function WorldMap({ onExecute, onAbort }) {
         {ldlNodes.map(node => {
           const isCurrent = currentLdl === node.id;
           const isVisited = routeHistory.includes(node.id);
+          const isActiveRegion = node.group === activeRegion;
           
           return (
             <div 
               key={node.id}
-              onClick={() => handleNodeClick(node.id)}
-              className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full cursor-pointer transition-all hover:scale-150 z-20 pointer-events-auto
-                ${isCurrent ? 'bg-white shadow-[0_0_15px_#ffffff] animate-pulse' : 
-                  isVisited ? 'bg-green-700' : 
+              onClick={() => isActiveRegion ? handleNodeClick(node.id) : null}
+              className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full transition-all z-20 
+                ${isActiveRegion ? 'pointer-events-auto hover:scale-150 cursor-pointer' : 'pointer-events-none opacity-20'}
+                ${isCurrent ? 'bg-white shadow-[0_0_15px_#ffffff] animate-pulse opacity-100' : 
+                  isVisited ? 'bg-green-700 opacity-100' : 
                   node.region === 'earth' ? 'bg-neon-green hover:bg-white' : 
                   node.region === 'orbit' ? 'bg-blue-400 hover:bg-white' : 'bg-red-500 hover:bg-white'}
               `}
               style={{ left: `${(node.x / 20) * 100}%`, top: `${(node.y / 24) * 100}%` }}
-              title={`${node.name}\nSec: ${node.sec} | Trace: ${node.traceMod}`}
+              title={`${node.name}\nSec: ${node.sec}`}
             >
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap font-mono text-[10px] text-neon-green opacity-70 drop-shadow-md pointer-events-none">
+              <span className={`absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap font-mono text-[9px] sm:text-[10px] text-neon-green drop-shadow-md pointer-events-none ${isActiveRegion ? 'opacity-80' : 'opacity-0'}`}>
                 {node.name}
               </span>
             </div>
           );
         })}
 
-        {/* Atmosphere Decor Layer */}
-        <div className="absolute top-[45%] w-full border-t border-dashed border-blue-500/30 pointer-events-none z-10">
-           <span className="absolute text-[8px] text-blue-500/50 p-1 pointer-events-none">ORBITAL LAYER</span>
-        </div>
-        <div className="absolute top-[75%] w-full border-t border-dashed border-red-500/30 pointer-events-none z-10">
-           <span className="absolute text-[8px] text-red-500/50 p-1 pointer-events-none">DEEP SPACE</span>
-        </div>
+        {/* Atmosphere Decor Layer (Only visible in SPACE tab) */}
+        {activeRegion === 'space' && (
+          <>
+            <div className="absolute top-[50%] w-full border-t border-dashed border-blue-500/30 pointer-events-none z-10">
+               <span className="absolute text-[8px] text-blue-500/50 p-1 pointer-events-none">ORBITAL LAYER</span>
+            </div>
+            <div className="absolute top-[80%] w-full border-t border-dashed border-red-500/30 pointer-events-none z-10">
+               <span className="absolute text-[8px] text-red-500/50 p-1 pointer-events-none">DEEP SPACE</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex gap-4 w-full justify-between mt-auto">
         <button 
           onClick={onAbort} 
-          className="border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto"
+          className="border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base"
         >
           [ ABORT ROUTE ]
         </button>
         <button 
           onClick={onExecute}
           disabled={!currentLdl}
-          className={`px-6 py-2 border-2 font-bold cursor-pointer transition-colors z-50 pointer-events-auto
+          className={`px-4 sm:px-6 py-2 border-2 font-bold cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base
             ${currentLdl ? 'bg-green-950 text-white border-neon-green hover:bg-neon-green hover:text-black' : 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed'}
           `}
         >

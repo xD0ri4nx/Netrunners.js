@@ -6,7 +6,6 @@ import { useMeatspaceStore } from '../store/meatspaceStore';
 import { useMissionStore } from '../store/missionStore';
 import { useRoutingStore } from '../store/routingStore';
 import { sfx } from '../utils/sfx';
-// NEW: Import the zoom library
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const GRID_SIZE = 15;
@@ -110,9 +109,31 @@ export function TheNet({ onJackOut }) {
     const iceEntities = world.with('isIce').entities;
     const addLog = useTerminalStore.getState().addLog;
     const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
-    const activeProgram = useCyberdeckStore.getState().activeProgram;
+    const { activeProgram, combatBonus } = useCyberdeckStore.getState();
 
     iceEntities.forEach(ice => {
+      const iceStr = ice.name === 'Pit Bull' ? 3 : ice.name === 'Bloodhound' ? 4 : 5;
+
+      // NEW: Passive Lore-Accurate Detection Routine
+      if (activeProgram && activeProgram.type === 'stealth') {
+        const playerHideRoll = Math.floor(Math.random() * 10) + 1;
+        const iceDetectRoll = Math.floor(Math.random() * 10) + 1;
+        
+        const hideTotal = playerHideRoll + int + interfaceLvl + activeProgram.strength + combatBonus;
+        const detectTotal = iceDetectRoll + iceStr;
+
+        if (hideTotal > detectTotal) {
+          // ICE fails to detect the invisible runner and skips its entire turn!
+          return; 
+        } else {
+          // ICE pierces the stealth and acts normally. We log it so the player knows their stealth failed!
+          const isAdjacent = Math.abs(ice.position.x - player.position.x) + Math.abs(ice.position.y - player.position.y) === 1;
+          if (isAdjacent) {
+             addLog(`> ALERT: ${ice.name.toUpperCase()} HAS PIERCED YOUR STEALTH CLOAK!`);
+          }
+        }
+      }
+
       const isAdjacent = () => Math.abs(ice.position.x - player.position.x) + Math.abs(ice.position.y - player.position.y) === 1;
 
       const executeIceAttack = () => {
@@ -120,19 +141,13 @@ export function TheNet({ onJackOut }) {
         
         const iceRoll = Math.floor(Math.random() * 10) + 1;
         const playerRoll = Math.floor(Math.random() * 10) + 1;
-        const iceStr = ice.name === 'Pit Bull' ? 3 : ice.name === 'Bloodhound' ? 4 : 5;
-        const progStr = activeProgram ? activeProgram.strength : 0;
+        const progStr = activeProgram && activeProgram.type !== 'stealth' ? activeProgram.strength : 0;
         
-        const traceMod = useRoutingStore.getState().totalTrace;
+        const attackTotal = iceRoll + iceStr;
+        const defenseTotal = playerRoll + int + interfaceLvl + progStr + combatBonus;
 
-        const attackTotal = iceRoll + iceStr + traceMod;
-        const defenseTotal = playerRoll + int + interfaceLvl + progStr;
-
-        if (traceMod > 0) {
-            addLog(`> ICE TRACE ADVANTAGE: +${traceMod}`);
-        }
-        addLog(`> ICE ATTACK: D10(${iceRoll}) + STR(${iceStr}) + TRACE(${traceMod}) = ${attackTotal}`);
-        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${progStr}) = ${defenseTotal}`);
+        addLog(`> ICE ATTACK: D10(${iceRoll}) + STR(${iceStr}) = ${attackTotal}`);
+        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
              const damage = Math.floor(Math.random() * 3) + 1; 
@@ -266,18 +281,14 @@ export function TheNet({ onJackOut }) {
     }
 
     if (hitIce) {
-      const activeProgram = useCyberdeckStore.getState().activeProgram;
+      const { activeProgram, combatBonus } = useCyberdeckStore.getState();
       const addLog = useTerminalStore.getState().addLog;
 
       if (!activeProgram) {
         sfx.error();
-        addLog(`> WARNING: ${hitIce.name.toUpperCase()} DETECTED. NO COMBAT PROGRAM SELECTED!`);
+        addLog(`> WARNING: ${hitIce.name.toUpperCase()} DETECTED. NO PROGRAM SELECTED!`);
         turnSpent = true; 
-      } else if (activeProgram.type !== 'anti-ice') {
-        sfx.error();
-        addLog(`> ERROR: ${activeProgram.name.toUpperCase()} IS INEFFECTIVE AGAINST BLACK ICE.`);
-        turnSpent = true; 
-      } else {
+      } else if (activeProgram.type === 'anti-ice') {
         addLog(`> INITIATING COMBAT SEQUENCE WITH ${activeProgram.name.toUpperCase()}...`);
         
         const playerRoll = Math.floor(Math.random() * 10) + 1;
@@ -286,10 +297,11 @@ export function TheNet({ onJackOut }) {
         const programStr = activeProgram.strength; 
         
         const { int, interfaceLvl } = useMeatspaceStore.getState();
-        const attackTotal = playerRoll + int + interfaceLvl + programStr;
+        
+        const attackTotal = playerRoll + int + interfaceLvl + programStr + combatBonus;
         const defenseTotal = iceRoll + iceStr;
 
-        addLog(`> ${activeProgram.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${programStr}) = ${attackTotal}`);
+        addLog(`> ${activeProgram.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${programStr}) + DECK(+${combatBonus}) = ${attackTotal}`);
         addLog(`> TARGET DEFENSE: D10(${iceRoll}) + STR(${iceStr}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
@@ -301,6 +313,40 @@ export function TheNet({ onJackOut }) {
           addLog("> ATTACK FAILED. WARNING: ICE COUNTER-TRACE DETECTED.");
         }
         turnSpent = true;
+      } else if (activeProgram.type === 'stealth') {
+        addLog(`> EXECUTING ${activeProgram.name.toUpperCase()}... INITIATING EVASION.`);
+        
+        const playerRoll = Math.floor(Math.random() * 10) + 1;
+        const iceRoll = Math.floor(Math.random() * 10) + 1;
+        const iceStr = hitIce.name === 'Pit Bull' ? 3 : hitIce.name === 'Bloodhound' ? 4 : 5;
+        const programStr = activeProgram.strength; 
+        
+        const { int, interfaceLvl } = useMeatspaceStore.getState();
+        
+        const evasionTotal = playerRoll + int + interfaceLvl + programStr + combatBonus;
+        const detectionTotal = iceRoll + iceStr;
+
+        addLog(`> EVASION: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${programStr}) + DECK(+${combatBonus}) = ${evasionTotal}`);
+        addLog(`> ICE DETECTION: D10(${iceRoll}) + STR(${iceStr}) = ${detectionTotal}`);
+
+        if (evasionTotal > detectionTotal) {
+          sfx.move();
+          addLog("> EVASION SUCCESSFUL. SLIPPING PAST BLACK ICE.");
+          const tempX = player.position.x;
+          const tempY = player.position.y;
+          player.position.x = hitIce.position.x;
+          player.position.y = hitIce.position.y;
+          hitIce.position.x = tempX;
+          hitIce.position.y = tempY;
+        } else {
+          sfx.error();
+          addLog("> EVASION FAILED. YOU HAVE BEEN DETECTED.");
+        }
+        turnSpent = true;
+      } else {
+        sfx.error();
+        addLog(`> ERROR: ${activeProgram.name.toUpperCase()} IS INEFFECTIVE AGAINST BLACK ICE.`);
+        turnSpent = true; 
       }
     }
 
@@ -317,8 +363,6 @@ export function TheNet({ onJackOut }) {
 
   return (
     <div className="flex flex-col items-center w-full h-full relative overflow-hidden">
-      
-      {/* NEW: Pan & Zoom Wrapper */}
       <TransformWrapper
         initialScale={1}
         minScale={0.5}
@@ -329,7 +373,6 @@ export function TheNet({ onJackOut }) {
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
-            {/* UI Overlay Controls */}
             <div className="absolute top-2 right-2 z-50 flex gap-2 opacity-70 hover:opacity-100">
               <button className="bg-black/80 border border-neon-green text-neon-green w-8 h-8 font-bold" onClick={() => zoomIn()}>+</button>
               <button className="bg-black/80 border border-neon-green text-neon-green w-8 h-8 font-bold" onClick={() => zoomOut()}>-</button>
@@ -372,7 +415,6 @@ export function TheNet({ onJackOut }) {
         )}
       </TransformWrapper>
 
-      {/* Jack Out Button - Kept outside the zoom wrapper so it stays fixed to the bottom */}
       <div className="absolute bottom-4 z-50">
         <button onClick={onJackOut} className="bg-black border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors font-bold text-sm sm:text-base shadow-2xl">
           [ EMERGENCY JACK OUT ]

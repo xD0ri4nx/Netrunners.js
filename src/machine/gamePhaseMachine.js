@@ -8,13 +8,17 @@ export const gamePhaseMachine = setup({}).createMachine({
       on: { 
         OPEN_NAVIGATOR: { target: 'navigator' },
         OPEN_SHOP: { target: 'shop' },
-        OPEN_JOBS: { target: 'jobs' } // NEW ROUTE
+        OPEN_JOBS: { target: 'jobs' },
+        TRIGGER_RAID: { target: 'raid' } // NEW: Intercepts return to safehouse
       }
+    },
+    raid: {
+      on: { SURVIVED_RAID: { target: 'safehouse' } } // NEW: Escape the cops
     },
     shop: {
       on: { LEAVE_SHOP: { target: 'safehouse' } }
     },
-    jobs: { // NEW STATE
+    jobs: { 
       on: { LEAVE_JOBS: { target: 'safehouse' } }
     },
     navigator: {
