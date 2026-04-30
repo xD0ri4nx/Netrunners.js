@@ -3,23 +3,33 @@ import { create } from 'zustand';
 export const useRoutingStore = create((set) => ({
   currentLdl: null,
   routeHistory: [],
-  totalTrace: 0,
-  
-  setStartingLdl: (id) => set({ 
-    currentLdl: id, 
-    routeHistory: [id], 
-    totalTrace: 0 
+  traceDefense: 0,
+  traceRisk: 0,
+
+  setStartingLdl: (id) => set({
+    currentLdl: id,
+    routeHistory: [id],
+    traceDefense: 0,
+    traceRisk: 0
   }),
 
-  jumpToLdl: (id, addedTrace) => set((state) => ({
+  jumpToLdl: (id, traceDefenseGain) => set((state) => ({
     currentLdl: id,
     routeHistory: [...state.routeHistory, id],
-    totalTrace: state.totalTrace + addedTrace
+    traceDefense: state.traceDefense + traceDefenseGain
   })),
 
-  addPenaltyTrace: (amount) => set((state) => ({
-    totalTrace: state.totalTrace + amount
+  addTraceRisk: (amount) => set((state) => ({
+    traceRisk: state.traceRisk + amount
   })),
 
-  resetRoute: () => set({ currentLdl: null, routeHistory: [], totalTrace: 0 })
+  reduceTraceDefense: (amount) => set((state) => ({
+    traceDefense: Math.max(0, state.traceDefense - amount)
+  })),
+
+  reduceTraceRisk: (amount) => set((state) => ({
+    traceRisk: Math.max(0, state.traceRisk - amount)
+  })),
+
+  resetRoute: () => set({ currentLdl: null, routeHistory: [], traceDefense: 0, traceRisk: 0 })
 }));

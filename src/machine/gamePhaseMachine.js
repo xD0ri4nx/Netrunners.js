@@ -2,29 +2,42 @@ import { setup } from 'xstate';
 
 export const gamePhaseMachine = setup({}).createMachine({
   id: 'gamePhase',
-  initial: 'safehouse', 
+  initial: 'safehouse',
   states: {
     safehouse: {
-      on: { 
+      on: {
         OPEN_NAVIGATOR: { target: 'navigator' },
         OPEN_SHOP: { target: 'shop' },
         OPEN_JOBS: { target: 'jobs' },
-        TRIGGER_RAID: { target: 'raid' } // NEW: Intercepts return to safehouse
+        OPEN_REPAIR: { target: 'repair' },
+        TRIGGER_RAID: { target: 'raid' }
       }
     },
     raid: {
-      on: { SURVIVED_RAID: { target: 'safehouse' } } // NEW: Escape the cops
+      on: { SURVIVED_RAID: { target: 'safehouse' } }
     },
     shop: {
       on: { LEAVE_SHOP: { target: 'safehouse' } }
     },
-    jobs: { 
+    jobs: {
       on: { LEAVE_JOBS: { target: 'safehouse' } }
+    },
+    repair: {
+      on: { LEAVE_REPAIR: { target: 'safehouse' } }
     },
     navigator: {
       on: {
+        RIVAL_ENCOUNTER: { target: 'rival_encounter' },
         INITIATE_LINK: { target: 'jacking_in' },
         CANCEL: { target: 'safehouse' }
+      }
+    },
+    rival_encounter: {
+      on: {
+        FIGHT_RIVAL: { target: 'jacking_in' },
+        FLEE_RIVAL: { target: 'jacking_in' },
+        PAY_RIVAL: { target: 'jacking_in' },
+        LOSE_TO_RIVAL: { target: 'safehouse' }
       }
     },
     jacking_in: {

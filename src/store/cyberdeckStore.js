@@ -2,45 +2,89 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export const useCyberdeckStore = create(
-  persist(
-    (set) => ({
-      deckModel: 'Zetatech Paraline',
-      maxMu: 5,
-      usedMu: 2, 
-      combatBonus: 0, // NEW: Passive deck bonus
-      programs: [
-        { id: 'prog_decrypt', name: 'Decrypt v1.0', type: 'utility', strength: 4 },
-        { id: 'prog_sword', name: 'Sword', type: 'anti-ice', strength: 4 }
-      ],
-      activeProgram: null,
+    persist(
+        (set) => ({
+            deckModel: 'Zetatech Paraline',
+            maxMu: 5,
+            usedMu: 2,
+            combatBonus: 0,
+            coprocessors: 0,
+            isCellular: false,
+            deckHealth: 100,
+            maxDeckHealth: 100,
+            deckCrashes: 0,
 
-      setActiveProgram: (id) => set((state) => ({
-        activeProgram: state.programs.find(p => p.id === id) || null
-      })),
+            programs: [
+                { id: 'prog_decrypt', name: 'Decrypt v1.0', type: 'utility', strength: 4 },
+                { id: 'prog_sword', name: 'Sword', type: 'anti-ice', strength: 4 }
+            ],
 
-      addProgram: (program) => set((state) => {
-         if (state.usedMu < state.maxMu) {
-            return {
-              programs: [...state.programs, program],
-              usedMu: state.usedMu + 1
-            };
-         }
-         return state;
-      }),
+            activeAction: null,
+            activePassives: [],
 
-      upgradeMu: (amount) => set((state) => ({
-        maxMu: state.maxMu + amount
-      })),
+            toggleProgram: (id) => set((state) => {
+                const prog = state.programs.find(p => p.id === id);
+                if (!prog) return state;
 
-      // NEW: Equip a new Cyberdeck
-      equipDeck: (model, mu, bonus) => set({
-        deckModel: model,
-        maxMu: mu,
-        combatBonus: bonus
-      })
-    }),
-    {
-      name: 'cyberdeck-storage'
-    }
-  )
+                if (prog.type === 'stealth' || prog.type === 'defense') {
+                    const isRunning = state.activePassives.some(p => p.id === id);
+                    if (isRunning) {
+                        return { activePassives: state.activePassives.filter(p => p.id !== id) };
+                    } else {
+                        return { activePassives: [...state.activePassives, prog] };
+                    }
+                } else {
+                    if (state.activeAction?.id === id) {
+                        return { activeAction: null };
+                    } else {
+                        return { activeAction: prog };
+                    }
+                }
+            }),
+
+            addProgram: (program) => set((state) => {
+                if (state.usedMu < state.maxMu) {
+                    return {
+                        programs: [...state.programs, program],
+                        usedMu: state.usedMu + 1
+                    };
+                }
+                return state;
+            }),
+
+            upgradeMu: (amount) => set((state) => ({
+                maxMu: state.maxMu + amount
+            })),
+
+            equipDeck: (model, mu, bonus) => set({
+                deckModel: model,
+                maxMu: mu,
+                combatBonus: bonus
+            }),
+
+            addCoprocessor: () => set((state) => ({
+                coprocessors: state.coprocessors + 1
+            })),
+
+            setCellular: (isCellular) => set({ isCellular }),
+
+            damageDeck: (amount) => set((state) => ({
+                deckHealth: Math.max(0, state.deckHealth - amount),
+                deckCrashes: state.deckCrashes + 1
+            })),
+
+            repairDeck: (amount) => set((state) => ({
+                deckHealth: Math.min(state.maxDeckHealth, state.deckHealth + amount)
+            })),
+
+            resetDeckCrashes: () => set({ deckCrashes: 0 }),
+
+            reduceMaxMu: (amount) => set((state) => ({
+                maxMu: Math.max(1, state.maxMu - amount)
+            }))
+        }),
+        {
+            name: 'cyberdeck-storage'
+        }
+    )
 );
