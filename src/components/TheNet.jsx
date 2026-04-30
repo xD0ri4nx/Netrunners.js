@@ -242,7 +242,7 @@ export function TheNet({ onJackOut }) {
     const iceEntities = world.with('isIce').entities;
     const addLog = useTerminalStore.getState().addLog;
     const { int, interfaceLvl, takeDamage, interfaceType } = useMeatspaceStore.getState();
-    const { activeAction, activePassives, combatBonus } = useCyberdeckStore.getState();
+    const { activeAction, activePassives } = useCyberdeckStore.getState();
 
     // Check if stealth is loaded in background
     const stealthProg = activePassives.find(p => p.type === 'stealth');
@@ -323,7 +323,7 @@ export function TheNet({ onJackOut }) {
         const playerHideRoll = Math.floor(Math.random() * 10) + 1;
         const iceDetectRoll = Math.floor(Math.random() * 10) + 1;
 
-        const hideTotal = playerHideRoll + int + interfaceLvl + stealthProg.strength + combatBonus + interfaceBonus;
+        const hideTotal = playerHideRoll + int + interfaceLvl + stealthProg.strength + interfaceBonus;
         const detectTotal = iceDetectRoll + iceStr + (flakProg ? -2 : 0);
 
         if (hideTotal > detectTotal) {
@@ -347,10 +347,10 @@ export function TheNet({ onJackOut }) {
         const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
 
         const attackTotal = iceRoll + iceStr;
-        const defenseTotal = playerRoll + int + interfaceLvl + progStr + combatBonus + interfaceBonus;
+        const defenseTotal = playerRoll + int + interfaceLvl + progStr + interfaceBonus;
 
         addLog(`> ICE ATTACK: D10(${iceRoll}) + STR(${iceStr}) = ${attackTotal}`);
-        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus}) = ${defenseTotal}`);
+        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
           const damage = Math.floor(Math.random() * 3) + 1;
@@ -364,10 +364,10 @@ export function TheNet({ onJackOut }) {
             addLog(`> SHIELD ACTIVATED. RESOLVING PROTECTION...`);
             const shieldRoll = Math.floor(Math.random() * 10) + 1;
             const iceRoll2 = Math.floor(Math.random() * 10) + 1;
-            const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength + combatBonus;
+            const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength;
             const iceShieldTotal = iceRoll2 + iceStr;
 
-            addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+${combatBonus}) = ${shieldTotal}`);
+            addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+0) = ${shieldTotal}`);
             addLog(`> ICE VS SHIELD: D10(${iceRoll2}) + STR(${iceStr}) = ${iceShieldTotal}`);
 
             if (shieldTotal >= iceShieldTotal) {
@@ -384,10 +384,10 @@ export function TheNet({ onJackOut }) {
             addLog(`> ARMOR ACTIVATED. RESOLVING PROTECTION...`);
             const armorRoll = Math.floor(Math.random() * 10) + 1;
             const iceRoll3 = Math.floor(Math.random() * 10) + 1;
-            const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength + combatBonus;
+            const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength;
             const iceArmorTotal = iceRoll3 + iceStr;
 
-            addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+${combatBonus}) = ${armorTotal}`);
+            addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+0) = ${armorTotal}`);
             addLog(`> ICE VS ARMOR: D10(${iceRoll3}) + STR(${iceStr}) = ${iceArmorTotal}`);
 
             if (armorTotal >= iceArmorTotal) {
@@ -649,15 +649,15 @@ export function TheNet({ onJackOut }) {
           const bestProg = sysop.programs.length > 0 ? sysop.programs.reduce((best, p) => p.strength > best.strength ? p : best, sysop.programs[0]) : { strength: 0, name: 'Null' };
           const attackTotal = sysopRoll + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
           const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
-          const { activePassives, combatBonus } = useCyberdeckStore.getState();
+          const { activePassives } = useCyberdeckStore.getState();
           const activeAction = useCyberdeckStore.getState().activeAction;
           const progStr = activeAction ? activeAction.strength : 0;
           const sysopInterfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-          const defenseTotal = playerRoll + int + interfaceLvl + progStr + combatBonus + sysopInterfaceBonus;
+          const defenseTotal = playerRoll + int + interfaceLvl + progStr + sysopInterfaceBonus;
 
           addLog(`> SYSOP ${sysop.name.toUpperCase()} ATTACKING WITH ${bestProg.name.toUpperCase()}!`);
           addLog(`> SYSOP: D10(${sysopRoll}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${attackTotal}`);
-          addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus}) = ${defenseTotal}`);
+          addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0) = ${defenseTotal}`);
 
           if (attackTotal > defenseTotal) {
             let damage = Math.floor(Math.random() * 3) + 1;
@@ -670,9 +670,9 @@ export function TheNet({ onJackOut }) {
               addLog(`> SHIELD ACTIVATED. RESOLVING PROTECTION VS SYSOP...`);
               const shieldRoll = Math.floor(Math.random() * 10) + 1;
               const sysopRoll2 = Math.floor(Math.random() * 10) + 1;
-              const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength + combatBonus;
+              const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength;
               const sysopShieldTotal = sysopRoll2 + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-              addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+${combatBonus}) = ${shieldTotal}`);
+              addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+0) = ${shieldTotal}`);
               addLog(`> SYSOP VS SHIELD: D10(${sysopRoll2}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${sysopShieldTotal}`);
               if (shieldTotal >= sysopShieldTotal) {
                 addLog('> SHIELD ABSORBED THE SYSOP ATTACK. ZERO DAMAGE.');
@@ -688,9 +688,9 @@ export function TheNet({ onJackOut }) {
               addLog(`> ARMOR ACTIVATED. RESOLVING PROTECTION VS SYSOP...`);
               const armorRoll = Math.floor(Math.random() * 10) + 1;
               const sysopRoll3 = Math.floor(Math.random() * 10) + 1;
-              const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength + combatBonus;
+              const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength;
               const sysopArmorTotal = sysopRoll3 + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-              addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+${combatBonus}) = ${armorTotal}`);
+              addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+0) = ${armorTotal}`);
               addLog(`> SYSOP VS ARMOR: D10(${sysopRoll3}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${sysopArmorTotal}`);
               if (armorTotal >= sysopArmorTotal) {
                 addLog('> ARMOR DEFLECTED THE SYSOP ATTACK. ZERO DAMAGE.');
@@ -784,15 +784,15 @@ export function TheNet({ onJackOut }) {
             const bestProg = sysop.programs.length > 0 ? sysop.programs.reduce((best, p) => p.strength > best.strength ? p : best, sysop.programs[0]) : { strength: 0, name: 'Null' };
             const attackTotal = sysopRoll + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
             const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
-            const { activePassives, combatBonus } = useCyberdeckStore.getState();
+            const { activePassives } = useCyberdeckStore.getState();
             const activeAction = useCyberdeckStore.getState().activeAction;
             const progStr = activeAction ? activeAction.strength : 0;
             const sysopInterfaceBonus2 = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-            const defenseTotal = playerRoll + int + interfaceLvl + progStr + combatBonus + sysopInterfaceBonus2;
+            const defenseTotal = playerRoll + int + interfaceLvl + progStr + sysopInterfaceBonus2;
 
             addLog(`> SYSOP ${sysop.name.toUpperCase()} ATTACKING WITH ${bestProg.name.toUpperCase()}!`);
             addLog(`> SYSOP: D10(${sysopRoll}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${attackTotal}`);
-            addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus})${sysopInterfaceBonus2 !== 0 ? ` + IFACE(${sysopInterfaceBonus2})` : ''} = ${defenseTotal}`);
+            addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${sysopInterfaceBonus2 !== 0 ? ` + IFACE(${sysopInterfaceBonus2})` : ''} = ${defenseTotal}`);
 
             if (attackTotal > defenseTotal) {
               let damage = Math.floor(Math.random() * 3) + 1;
@@ -805,9 +805,9 @@ export function TheNet({ onJackOut }) {
                 addLog(`> SHIELD ACTIVATED. RESOLVING PROTECTION VS SYSOP...`);
                 const shieldRoll = Math.floor(Math.random() * 10) + 1;
                 const sysopRoll2 = Math.floor(Math.random() * 10) + 1;
-                const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength + combatBonus;
+                const shieldTotal = shieldRoll + int + interfaceLvl + shieldProg.strength;
                 const sysopShieldTotal = sysopRoll2 + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-                addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+${combatBonus}) = ${shieldTotal}`);
+                addLog(`> SHIELD: D10(${shieldRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${shieldProg.strength}) + DECK(+0) = ${shieldTotal}`);
                 addLog(`> SYSOP VS SHIELD: D10(${sysopRoll2}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${sysopShieldTotal}`);
                 if (shieldTotal >= sysopShieldTotal) {
                   addLog('> SHIELD ABSORBED THE SYSOP ATTACK. ZERO DAMAGE.');
@@ -823,9 +823,9 @@ export function TheNet({ onJackOut }) {
                 addLog(`> ARMOR ACTIVATED. RESOLVING PROTECTION VS SYSOP...`);
                 const armorRoll = Math.floor(Math.random() * 10) + 1;
                 const sysopRoll3 = Math.floor(Math.random() * 10) + 1;
-                const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength + combatBonus;
+                const armorTotal = armorRoll + int + interfaceLvl + armorProg.strength;
                 const sysopArmorTotal = sysopRoll3 + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-                addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+${combatBonus}) = ${armorTotal}`);
+                addLog(`> ARMOR: D10(${armorRoll}) + INT(${int}) + INTF(${interfaceLvl}) + STR(${armorProg.strength}) + DECK(+0) = ${armorTotal}`);
                 addLog(`> SYSOP VS ARMOR: D10(${sysopRoll3}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${sysopArmorTotal}`);
                 if (armorTotal >= sysopArmorTotal) {
                   addLog('> ARMOR DEFLECTED THE SYSOP ATTACK. ZERO DAMAGE.');
@@ -959,10 +959,10 @@ export function TheNet({ onJackOut }) {
         const cpuDefense = 4;
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
-        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
         const defenseTotal = cpuRoll + cpuDefense;
 
-        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
         addLog(`> CPU DEFENSE: D10(${cpuRoll}) + STR(${cpuDefense}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
@@ -1097,7 +1097,7 @@ export function TheNet({ onJackOut }) {
     }
 
     if (hitMemory) {
-      const { activeAction, combatBonus } = useCyberdeckStore.getState();
+      const { activeAction } = useCyberdeckStore.getState();
       const addLog = useTerminalStore.getState().addLog;
 
       if (activeAction && activeAction.type === 'anti-system') {
@@ -1108,10 +1108,10 @@ export function TheNet({ onJackOut }) {
         const memDefense = 3;
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
-        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
         const defenseTotal = memRoll + memDefense;
 
-        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
         addLog(`> MEMORY DEFENSE: D10(${memRoll}) + STR(${memDefense}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
@@ -1178,7 +1178,7 @@ export function TheNet({ onJackOut }) {
     }
 
     if (hitIce) {
-      const { activeAction, activePassives, combatBonus } = useCyberdeckStore.getState();
+      const { activeAction, activePassives } = useCyberdeckStore.getState();
       const addLog = useTerminalStore.getState().addLog;
       const stealthProg = activePassives.find(p => p.type === 'stealth');
 
@@ -1192,10 +1192,10 @@ export function TheNet({ onJackOut }) {
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
 
-        const evasionTotal = playerRoll + int + interfaceLvl + stealthProg.strength + combatBonus + interfaceBonus;
+        const evasionTotal = playerRoll + int + interfaceLvl + stealthProg.strength + interfaceBonus;
         const detectionTotal = iceRoll + iceStr;
 
-        addLog(`> EVASION: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${stealthProg.strength}) + DECK(+${combatBonus}) = ${evasionTotal}`);
+        addLog(`> EVASION: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${stealthProg.strength}) + DECK(+0) = ${evasionTotal}`);
         addLog(`> ICE DETECTION: D10(${iceRoll}) + STR(${iceStr}) = ${detectionTotal}`);
 
         if (evasionTotal > detectionTotal) {
@@ -1223,10 +1223,10 @@ export function TheNet({ onJackOut }) {
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
 
-        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
         const defenseTotal = iceRoll + iceStr;
 
-        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
         addLog(`> TARGET DEFENSE: D10(${iceRoll}) + STR(${iceStr}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
@@ -1267,7 +1267,7 @@ export function TheNet({ onJackOut }) {
     }
 
     if (hitSysop) {
-      const { activeAction, activePassives, combatBonus } = useCyberdeckStore.getState();
+      const { activeAction, activePassives } = useCyberdeckStore.getState();
       const addLog = useTerminalStore.getState().addLog;
 
       if (hitSysop.isRogueAI) {
@@ -1289,9 +1289,9 @@ export function TheNet({ onJackOut }) {
         const sysopDefense = sysopRoll + hitSysop.int + hitSysop.interfaceLvl + hitSysop.deckBonus;
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
-        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
 
-        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
         addLog(`> SYSOP DEFENSE: D10(${sysopRoll}) + INT(${hitSysop.int}) + INTF(${hitSysop.interfaceLvl}) + DECK(+${hitSysop.deckBonus}) = ${sysopDefense}`);
 
         if (attackTotal > sysopDefense) {
@@ -1472,7 +1472,7 @@ export function TheNet({ onJackOut }) {
           const typeLabel = controllerMenu.type === 'cameras' ? 'CAMERA GRID' : controllerMenu.type === 'blastDoors' ? 'BLAST DOOR' : 'TURRET ARRAY';
           const handleControllerAction = (action) => {
             const addLog = useTerminalStore.getState().addLog;
-            const { activeAction, combatBonus } = useCyberdeckStore.getState();
+            const { activeAction } = useCyberdeckStore.getState();
             const { int, interfaceLvl, interfaceType } = useMeatspaceStore.getState();
             const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
 
@@ -1491,11 +1491,11 @@ export function TheNet({ onJackOut }) {
 
               const playerRoll = Math.floor(Math.random() * 10) + 1;
               const defenseRoll = Math.floor(Math.random() * 10) + 1;
-              const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+              const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
               const defenseTotal = defenseRoll + controllerMenu.defense;
 
               addLog(`> DISABLING CAMERA GRID...`);
-              addLog(`> UTILITY: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+              addLog(`> UTILITY: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
               addLog(`> DEFENSE: D10(${defenseRoll}) + STR(${controllerMenu.defense}) = ${defenseTotal}`);
 
               if (attackTotal > defenseTotal) {
@@ -1530,11 +1530,11 @@ export function TheNet({ onJackOut }) {
 
               const playerRoll = Math.floor(Math.random() * 10) + 1;
               const defenseRoll = Math.floor(Math.random() * 10) + 1;
-              const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + combatBonus + interfaceBonus;
+              const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
               const defenseTotal = defenseRoll + controllerMenu.defense;
 
               addLog(`> HIJACKING TURRET ARRAY...`);
-              addLog(`> ANTI-SYSTEM: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+              addLog(`> ANTI-SYSTEM: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
               addLog(`> DEFENSE: D10(${defenseRoll}) + STR(${controllerMenu.defense}) = ${defenseTotal}`);
 
               if (attackTotal > defenseTotal) {

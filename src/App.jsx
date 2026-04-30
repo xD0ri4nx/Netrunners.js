@@ -282,17 +282,17 @@ export default function App() {
             {state.matches('rival_encounter') && rivalEncounter && (() => {
               const resolveFight = () => {
                 const { int, interfaceLvl, takeDamage, health, interfaceType } = useMeatspaceStore.getState();
-                const { combatBonus, activeAction } = useCyberdeckStore.getState();
+                const { activeAction } = useCyberdeckStore.getState();
                 const addLog = useTerminalStore.getState().addLog;
                 const playerRoll = Math.floor(Math.random() * 10) + 1;
                 const rivalRoll = Math.floor(Math.random() * 10) + 1;
                 const progStr = activeAction ? activeAction.strength : 0;
                 const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-                const attackTotal = playerRoll + int + interfaceLvl + progStr + combatBonus + interfaceBonus;
+                const attackTotal = playerRoll + int + interfaceLvl + progStr + interfaceBonus;
                 const defenseTotal = rivalRoll + rivalEncounter.int + rivalEncounter.interfaceLvl + rivalEncounter.progStr + rivalEncounter.deckBonus;
 
                 addLog(`> RIVAL COMBAT: ${rivalEncounter.name.toUpperCase()}`);
-                addLog(`> YOU: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+                addLog(`> YOU: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
                 addLog(`> RIVAL: D10(${rivalRoll}) + INT(${rivalEncounter.int}) + INTF(${rivalEncounter.interfaceLvl}) + PROG(${rivalEncounter.progStr}) + DECK(+${rivalEncounter.deckBonus}) = ${defenseTotal}`);
 
                 if (attackTotal > defenseTotal) {
@@ -389,8 +389,8 @@ export default function App() {
           </div>
           <p>&gt; MODEL: {cyberdeck.deckModel}</p>
           <p>&gt; MEMORY: {cyberdeck.usedMu} / {cyberdeck.maxMu} MU</p>
-          {cyberdeck.combatBonus > 0 && (
-              <p className="text-yellow-400 font-bold">&gt; DECK COMBAT BONUS: +{cyberdeck.combatBonus}</p>
+          {false && (
+              <p className="text-yellow-400 font-bold">&gt; DECK SPEED: +{cyberdeck.speed}</p>
           )}
           {cyberdeck.coprocessors > 0 && (
               <p className="text-teal-400 font-bold">&gt; COPROCESSORS: {cyberdeck.coprocessors} ({cyberdeck.coprocessors} EXTRA ACTION{cyberdeck.coprocessors > 1 ? 'S' : ''})</p>

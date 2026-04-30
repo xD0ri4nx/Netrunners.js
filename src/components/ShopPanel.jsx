@@ -22,26 +22,36 @@ const PRODUCTS = {
     { id: 'prog_flak', name: 'Flak', type: 'defense', strength: 4, mu: 2, cost: 180, desc: '-2 to ICE Detection rolls. -1 dmg mitigation. STR: 4, 2 MU.' },
   ],
   cyberdecks: [
-    { id: 'deck_zetatech', model: 'Zetatech Paraline', mu: 5, bonus: 0, cost: 0, desc: 'Standard issue cyberdeck. Base MU: 5 | Combat Bonus: +0' },
-    { id: 'deck_fuchi4', model: 'Fuchi Cyber-4', mu: 10, bonus: 1, cost: 5000, desc: 'Mid-tier deck. Base MU: 10 | Combat Bonus: +1' },
-    { id: 'deck_raven', model: 'Raven Microcyber', mu: 15, bonus: 2, cost: 10000, desc: 'High-end deck. Base MU: 15 | Combat Bonus: +2' },
-    { id: 'deck_deckman', model: 'Deckman Portable', mu: 3, bonus: 0, cost: 2000, desc: 'Portable cyberdeck. Base MU: 3 | Combat Bonus: +0' },
-    { id: 'deck_cyber-1', model: 'Cyber-1 Console', mu: 20, bonus: 3, cost: 20000, desc: 'Elite console. Base MU: 20 | Combat Bonus: +3' },
+    { id: 'deck_zetatech', model: 'Zetatech Paraline', mu: 5, speed: 1, dataWalls: 3, cost: 0, desc: 'Standard issue. MU: 5 | Speed: 1 | Wall STR: 3' },
+    { id: 'deck_fuchi4', model: 'Fuchi Cyber-4', mu: 10, speed: 1, dataWalls: 4, cost: 5000, desc: 'Mid-tier. MU: 10 | Speed: 1 | Wall STR: 4' },
+    { id: 'deck_raven', model: 'Raven Microcyber', mu: 15, speed: 2, dataWalls: 5, cost: 10000, desc: 'High-end. MU: 15 | Speed: 2 | Wall STR: 5' },
+    { id: 'deck_deckman', model: 'Deckman Portable', mu: 3, speed: 1, dataWalls: 2, cost: 2000, desc: 'Portable. MU: 3 | Speed: 1 | Wall STR: 2' },
+    { id: 'deck_cyber-1', model: 'Cyber-1 Console', mu: 20, speed: 3, dataWalls: 6, cost: 20000, desc: 'Elite. MU: 20 | Speed: 3 | Wall STR: 6' },
   ],
-  addons: [
-    { id: 'addon_cellular', name: 'Cellular Mod', type: 'cellular', cost: 2500, desc: 'Launch from orbital LDLs directly. Reduces trace risk by 1 per jump.' },
+  options: [
+    { id: 'addon_cellular', name: 'Cellular Mod', type: 'cellular', cost: 4000, desc: 'Launch from orbital LDLs directly. Reduces trace risk by 1 per jump.' },
     { id: 'addon_coprocessor', name: 'Coprocessor Module', type: 'coprocessor', cost: 3000, desc: 'Execute 2 player actions for every 1 enemy turn. Stacks per purchase.' },
     { id: 'addon_memory', name: 'Memory Expansion Chip', type: 'memory', cost: 1000, desc: 'Upgrades deck capacity by +1 MU.' },
     { id: 'addon_interface_plugs', name: 'Interface Plugs', type: 'interface', cost: 1500, desc: '+1 to ALL rolls, +50% neural damage taken. Surgical install.' },
-    { id: 'addon_trodes', name: 'Trode Set', type: 'interface', cost: 500, desc: '-1 to ALL rolls, safe (no extra neural damage). Non-invasive.' },
-    { id: 'addon_scramble', name: 'Scramble Chip', type: 'scramble', cost: 5000, desc: 'Emergency jack-out without trace penalty. 1-use per run.' },
+    { id: 'addon_trodes', name: 'Trode Set', type: 'interface', cost: 20, desc: '-1 to ALL rolls, safe (no extra neural damage). Non-invasive.' },
+    { id: 'addon_keyboard', name: 'Keyboard', type: 'keyboard', cost: 100, desc: 'Standard input device for deck operation.' },
+    { id: 'addon_videoboard', name: 'Videoboard', type: 'videoboard', cost: 100, desc: 'Per sq. ft. Visual display output for deck.' },
+    { id: 'addon_printer', name: 'Printer', type: 'printer', cost: 300, desc: 'Hardcopy output device.' },
+    { id: 'addon_chipreader', name: 'Chipreader', type: 'chipreader', cost: 100, desc: 'Reads standard data chips.' },
+    { id: 'addon_extrachips', name: 'Extra Chips', type: 'extrachips', cost: 10, desc: 'Per chip. Additional storage media.' },
+    { id: 'addon_voxbox', name: 'Vox Box', type: 'voxbox', cost: 300, desc: 'Voice input/output device.' },
+    { id: 'addon_scanner', name: 'Scanner', type: 'scanner', cost: 100, desc: 'Basic scanning device (100eb/sq ft).' },
+    { id: 'addon_interface_cables', name: 'Interface Cables', type: 'interface_cables', cost: 20, desc: 'Standard connection cables (20-30eb).' },
+    { id: 'addon_low_impedance', name: 'Low Impedance Cables', type: 'low_impedance', cost: 60, desc: 'Premium signal cables.' },
+    { id: 'addon_terminal', name: 'Terminal', type: 'terminal', cost: 400, desc: 'Full workstation terminal.' },
+    { id: 'addon_scramble', name: 'Scramble Chip', type: 'scramble', cost: 5000, desc: 'Emergency jack-out without trace penalty. Permanent install.' },
     { id: 'addon_speed', name: 'Speed Chip', type: 'speed', cost: 3000, desc: 'Move 2 cells per turn instead of 1.' },
-    { id: 'addon_ripple', name: 'Ripple System', type: 'ripple', cost: 4000, desc: 'Trace defense +2 per successful routing jump.' },
+    { id: 'addon_ripple', name: 'Ripple System', type: 'ripple', cost: 4000, desc: '+1 trace defense per successful routing jump.' },
   ],
   upgrades: [
     { id: 'upgrade_mu1', name: 'MU Upgrade +1', amount: 1, cost: 500, desc: 'Increase max MU by 1.' },
-    { id: 'upgrade_mu3', name: 'MU Upgrade +3', amount: 3, cost: 1200, desc: 'Increase max MU by 3.' },
-    { id: 'upgrade_combat', name: 'Combat Bonus +1', amount: 1, cost: 2000, desc: 'Increase deck combat bonus by +1.' },
+    { id: 'upgrade_speed', name: 'Speed Upgrade +1', amount: 1, cost: 2000, desc: 'Increase deck speed by +1 (max 5).' },
+    { id: 'upgrade_datawall', name: 'Data Wall Upgrade +1', amount: 1, cost: 1000, desc: 'Increase data wall strength by +1 (max 10).' },
   ]
 };
 
@@ -83,9 +93,9 @@ export function ShopPanel({ onClose }) {
           sfx.error();
           return;
         }
-        equipDeck(product.model, product.mu, product.bonus);
+        equipDeck(product.model, product.mu, product.speed, product.dataWalls);
         break;
-      case 'addons':
+      case 'options':
         if (product.type === 'cellular') {
           if (useCyberdeckStore.getState().isCellular) {
             sfx.error();
@@ -96,6 +106,13 @@ export function ShopPanel({ onClose }) {
           addCoprocessor();
         } else if (product.type === 'memory') {
           upgradeMu(1);
+        } else if (product.type === 'speed') {
+          useCyberdeckStore.getState().addSpeed();
+        } else if (product.type === 'ripple') {
+          useCyberdeckStore.getState().addRipple();
+        } else if (product.type === 'scramble') {
+          // Scramble Chip - permanent install, no trace penalty on jack-out
+          // This would need a state flag in meatspace/cyberdeck store
         } else if (product.type === 'interface') {
           if (product.id.includes('plugs') && interfaceType === 'interfacePlugs') {
             sfx.error();
@@ -109,7 +126,17 @@ export function ShopPanel({ onClose }) {
         }
         break;
       case 'upgrades':
-        upgradeMu(product.amount);
+        if (product.id === 'upgrade_speed') {
+          const currentSpeed = useCyberdeckStore.getState().speed;
+          if (currentSpeed >= 5) { sfx.error(); return; }
+          useCyberdeckStore.getState().addSpeed();
+        } else if (product.id === 'upgrade_datawall') {
+          const currentWalls = useCyberdeckStore.getState().dataWalls;
+          if (currentWalls >= 10) { sfx.error(); return; }
+          useCyberdeckStore.getState().addDataWalls();
+        } else {
+          upgradeMu(product.amount);
+        }
         break;
     }
   };
@@ -117,7 +144,7 @@ export function ShopPanel({ onClose }) {
   const filters = [
     { id: 'programs', label: 'SOFTWARE' },
     { id: 'cyberdecks', label: 'CYBERDECKS' },
-    { id: 'addons', label: 'OPTIONS' },
+    { id: 'options', label: 'OPTIONS' },
     { id: 'upgrades', label: 'UPGRADES' }
   ];
 
@@ -170,7 +197,7 @@ export function ShopPanel({ onClose }) {
       <p className="text-xs text-gray-400 mb-4 border-b border-neon-green/30 pb-2">
         {activeFilter === 'programs' && 'Software & Programs - Equip in your cyberdeck'}
         {activeFilter === 'cyberdecks' && 'Cyberdeck Models - Base hardware for NET running'}
-        {activeFilter === 'addons' && 'Hardware Add-ons - Per sourcebook rules'}
+        {activeFilter === 'options' && 'Hardware Options - Per sourcebook rules'}
         {activeFilter === 'upgrades' && 'Deck Upgrades - Increase MU or combat bonus'}
       </p>
 
@@ -200,7 +227,7 @@ export function ShopPanel({ onClose }) {
               </div>
               <div className="text-xs text-gray-400">
                 {product.desc}
-                {product.mu && ` | ${product.mu} MU`}
+                {activeFilter === 'programs' && product.mu && ` | ${product.mu} MU`}
                 {product.strength && ` | STR: ${product.strength}`}
               </div>
               {(alreadyOwned || currentDeck) && (
