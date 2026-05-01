@@ -236,3 +236,48 @@ Completed features:
     * **UPGRADES:** Increase MU (+1 for 500 eb, +3 for 1200 eb) or combat bonus (+1 for 2000 eb)
 * **Product Grid:** Visual grid layout with color-coded types, cost display, already-owned indicators
 * **Integration:** ShopPanel component with filter tabs, product selection, and purchase handling
+
+---
+
+## 6. POST-ROADMAP EXPANSIONS (ENDGAME VISION)
+Once the 10-Phase core roadmap is completed and the simulator mirrors the TTRPG entirely, development can shift toward these massive replayability expansions:
+
+### Expansion 1: Faction Reputation & Corporate Wars
+* **Reputation Economy:** Hacking corporate Dataforts (e.g., Arasaka) increases your "Wanted Level" with them, making their ICE deadlier, but earns you reputation with rival factions (e.g., Militech, Yakuza).
+* **VIP Black Markets:** High faction reputation unlocks proprietary, military-grade Cyberdecks and ICE unavailable on the standard Afterlife BBS.
+
+### Expansion 2: Datafort Construction (Asynchronous PvP)
+* **Custom Servers:** Players can purchase blank grid spaces and spend Eurobucks to build their own Dataforts, placing Data Walls, Code Gates, custom ICE patrol routes, and Daemons.
+* **Seed Sharing:** The custom Datafort generates a unique seed/hash that can be shared online, allowing other players to paste the code and attempt a run against the player's custom security.
+
+### Expansion 3: Edgerunner Crew Management
+* **Meatspace Mercenaries:** Players can use the Safehouse to hire NPC crews (Solos, Techies, Nomads) for physical heists.
+* **Synchronized Runs:** While navigating the Net, players receive radio updates from their crew in the real world. Players face strict turn-limits to hack Controller Nodes (e.g., Turrets, Blast Doors) to ensure their crew survives and extracts the physical payload.
+
+### Expansion 4: The DataKrash (Survival Mode)
+* **The Bartmoss Event:** A brutal roguelike challenge mode recreating the destruction of the Old Net.
+* **Collapsing Grid:** The procedural Mega-Fort literally deletes itself turn-by-turn. The grid turns to static, forcing a high-speed race to extract legendary files before the corruption flatlines the player's brain.
+
+### Expansion 5: Trauma Team & Meta-Progression
+* **Insurance Policies:** To mitigate the harshness of late-game permadeath, players can pay exorbitant monthly Eurobuck fees for Trauma Team International insurance or illegal clone-vats.
+* **Soft Permadeath:** If a player flatlines, Trauma Team raids their location. The player loses their equipped Cyberdeck and mission loot, but retains their base Meatspace stats, skills, and Safehouse stash.
+
+
+### Expansion 6: Meatspace Cyberware & Ripperdocs
+* **Body Modification:** Expand the Meatspace UI to include a "Ripperdoc" clinic. Players can spend Eurobucks to surgically upgrade their Meatspace stats.
+* **Neuralware:** Install Math Co-processors to boost INT, Kerenzikov reflex enhancers to boost REF, or upgraded Neural Links to increase max Neural HP.
+* **Humanity Cost:** Installing cyberware lowers the player's Empathy/Humanity stat. If it drops too low, the player experiences Cyberpsychosis, causing random UI glitches, visual hallucinations on the Net grid, or forced reckless actions.
+
+### Expansion 7: Corporate Stock Manipulation
+* **The "Short Squeeze" Heist:** Introduce a dynamic global stock market ticker in the Safehouse.
+* **Insider Trading:** Before launching a destructive run on a corporate Datafort (e.g., crashing a Militech CPU), the player can use their Eurobucks to short Militech's stock or invest in their rivals.
+* **Economic Ripple Effects:** Successfully stealing a Black File or destroying a core node dynamically alters the stock prices, allowing the player to double their heist payout through illegal market manipulation.
+
+### Expansion 8: Environmental Grid Hazards (Net Storms)
+* **Dynamic Grid Weather:** The Net isn't always stable. Introduce randomized environmental hazards on the 2D grid that affect both the player and Black ICE.
+* **Data Static & Ion Storms:** "Static Clouds" that limit visibility/fog-of-war to 1 tile, or "Ion Storms" in Orbital Space nodes that randomly scramble movement coordinates or temporarily disable specific Cyberdeck programs.
+
+### Expansion 9: Faction-Aligned Fixers & Information Brokering
+* **Specific Contacts:** Replace the generic "BBS Job Board" with a roster of distinct Fixer NPCs (e.g., a Corpo Rat, a Yakuza Boss, a Nomad Outcast).
+* **Information Brokering:** When the player extracts a "Grey File," they can choose who to sell it to. Selling Arasaka data to Militech pays well but increases Arasaka's active trace on the player.
+* **Loyalty Perks:** Building max loyalty with a specific Fixer unlocks unique safehouses, custom UI color schemes, or emergency bail-out funds if the player goes bankrupt.

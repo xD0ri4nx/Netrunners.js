@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRoutingStore } from '../store/routingStore';
 import { useTerminalStore } from '../store/terminalStore';
 import { useCyberdeckStore } from '../store/cyberdeckStore';
+import { useMeatspaceStore } from '../store/meatspaceStore';
 import { LDL_DATABASE, CORP_THEMES } from '../data/ldlDatabase';
 import { sfx } from '../utils/sfx';
 
@@ -19,6 +20,7 @@ export function WorldMap({ onExecute, onAbort }) {
   const isCellular = useCyberdeckStore(state => state.isCellular);
 
   const addLog = useTerminalStore(state => state.addLog);
+  const updateFactionRep = useMeatspaceStore(state => state.updateFactionRep);
 
   const ldlNodes = Object.values(LDL_DATABASE);
 
@@ -107,6 +109,13 @@ export function WorldMap({ onExecute, onAbort }) {
       sfx.loot();
       const defenseGain = isCellular ? target.traceDefense + 1 : target.traceDefense;
       jumpToLdl(targetId, defenseGain);
+      
+      // Expansion 1: Update faction reputation on successful hack
+      if (target.corp) {
+        updateFactionRep(target.corp, -10);
+        addLog(`> CORPORATE SECURITY BREACHED. ${target.corp.toUpperCase()} REPUTATION DECREASED.`);
+      }
+      
       if (isCellular) {
         addLog(`> CELLULAR DECK BOOST. TRACE DEFENSE INCREASED BY ${defenseGain} (DEF: ${useRoutingStore.getState().traceDefense}).`);
       } else {

@@ -52,6 +52,14 @@ export function RepairPanel({ onClose }) {
       cost: 800,
       days: 5,
       effect: () => reduceMaxMu(-1)
+    },
+    {
+      id: 'heal_neural',
+      name: 'NEURAL THERAPY',
+      description: 'Restore 3 neural damage (clinic visit)',
+      cost: 500,
+      days: 3,
+      effect: () => useMeatspaceStore.getState().healNeuralDamage(3)
     }
   ];
 

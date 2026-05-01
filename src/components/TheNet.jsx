@@ -11,10 +11,26 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 const GRID_SIZE = 15;
 
+const getTimeLagPenalty = (currentLdl) => {
+  if (!currentLdl || !LDL_DATABASE[currentLdl]) return 0;
+  const region = LDL_DATABASE[currentLdl].region;
+  const meatspace = useMeatspaceStore.getState();
+  let penalty = 0;
+  // Roche Bartmoss' Guide: Space run penalties
+  if (region === 'orbit') penalty = -1;
+  else if (region === 'luna' || region === 'eurospace') penalty = -4; // Crystal Palace
+  else if (region === 'mars') penalty = -20;
+  else penalty = 0; // Earth = no penalty
+  // Time-Lag Buffer reduces penalty to flat -2
+  if (penalty < -2 && meatspace.timelagInterface) penalty = -2;
+  return penalty;
+};
+
 export function TheNet({ onJackOut }) {
   const [, setTick] = useState(0);
   const [controllerMenu, setControllerMenu] = useState(null);
   const [turnCount, setTurnCount] = useState(0);
+  const [damageTaken, setDamageTaken] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
   const currentLdl = useRoutingStore(state => state.currentLdl);
@@ -235,19 +251,43 @@ export function TheNet({ onJackOut }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const awardIp = () => {
+      const addLog = useTerminalStore.getState().addLog;
+      const currentLdl = useRoutingStore.getState().currentLdl;
+      if (!currentLdl || !LDL_DATABASE[currentLdl]) return;
+
+      const secLevel = LDL_DATABASE[currentLdl].sec;
+      const baseIp = secLevel * 10;
+      let ipAwarded = baseIp;
+
+      if (!damageTaken) {
+        addLog(`> NO NEURAL DAMAGE TAKEN. BONUS +50 IP.`);
+        ipAwarded += 50;
+      }
+
+      const turnBonus = Math.max(0, (20 - turnCount) * 5);
+      if (turnBonus > 0) {
+        addLog(`> SPEED BONUS: COMPLETED IN ${turnCount} TURNS. +${turnBonus} IP.`);
+        ipAwarded += turnBonus;
+      }
+
+      useMeatspaceStore.getState().addIp(ipAwarded);
+      addLog(`> TOTAL IP AWARDED: ${ipAwarded} (SEC ${secLevel} × 10 + BONUSES).`);
+    };
+
   const executeEnemyTurn = () => {
     const player = world.with('isPlayer').entities[0];
     if (!player) return;
 
     const iceEntities = world.with('isIce').entities;
     const addLog = useTerminalStore.getState().addLog;
-    const { int, interfaceLvl, takeDamage, interfaceType } = useMeatspaceStore.getState();
-    const { activeAction, activePassives } = useCyberdeckStore.getState();
+    const { int, interfaceLvl, takeNeuralDamage, interfaceType } = useMeatspaceStore.getState();
+    const { activeAction, activePassives, deckType } = useCyberdeckStore.getState();
 
     // Check if stealth is loaded in background
     const stealthProg = activePassives.find(p => p.type === 'stealth');
     const flakProg = activePassives.find(p => p.id === 'prog_flak');
-    const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
+    const interfaceBonus = deckType === 'brainware' ? 2 : (interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0);
 
     if (flakProg) {
       addLog('> FLAK PROGRAM ACTIVE. STATIC INTERFERENCE BLINDING ENEMY SENSORS.');
@@ -344,13 +384,15 @@ export function TheNet({ onJackOut }) {
         const iceRoll = Math.floor(Math.random() * 10) + 1;
         const playerRoll = Math.floor(Math.random() * 10) + 1;
         const progStr = activeAction ? activeAction.strength : 0;
-        const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
+        const timelagPenalty = getTimeLagPenalty(currentLdl);
+        const interfaceBonus = deckType === 'brainware' ? 2 : (interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0) + timelagPenalty;
 
+        const currentInt = useMeatspaceStore.getState().getCurrentInt();
         const attackTotal = iceRoll + iceStr;
-        const defenseTotal = playerRoll + int + interfaceLvl + progStr + interfaceBonus;
+        const defenseTotal = playerRoll + currentInt + interfaceLvl + progStr + interfaceBonus;
 
         addLog(`> ICE ATTACK: D10(${iceRoll}) + STR(${iceStr}) = ${attackTotal}`);
-        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0) = ${defenseTotal}`);
+        addLog(`> DEFENSE: D10(${playerRoll}) + INT(${currentInt}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
           const damage = Math.floor(Math.random() * 3) + 1;
@@ -406,8 +448,11 @@ export function TheNet({ onJackOut }) {
             addLog(`> FLAK INTERFERENCE REDUCED DAMAGE: -1.`);
           }
 
+          if (finalDamage > 0) {
+            setDamageTaken(true);
+          }
           addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${ice.name.toUpperCase()}!`);
-          takeDamage(finalDamage);
+          takeNeuralDamage(finalDamage);
           sfx.damage();
 
           if (ice.name === 'Firestarter') {
@@ -438,9 +483,10 @@ export function TheNet({ onJackOut }) {
             }
           }
 
-          if (useMeatspaceStore.getState().health === 0) {
+          if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
             addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
             sfx.flatline();
+            awardIp();
             setTimeout(() => onJackOut(), 1500);
           }
         } else {
@@ -648,16 +694,17 @@ export function TheNet({ onJackOut }) {
           const playerRoll = Math.floor(Math.random() * 10) + 1;
           const bestProg = sysop.programs.length > 0 ? sysop.programs.reduce((best, p) => p.strength > best.strength ? p : best, sysop.programs[0]) : { strength: 0, name: 'Null' };
           const attackTotal = sysopRoll + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-          const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
+          const { int, interfaceLvl, takeNeuralDamage } = useMeatspaceStore.getState();
           const { activePassives } = useCyberdeckStore.getState();
           const activeAction = useCyberdeckStore.getState().activeAction;
           const progStr = activeAction ? activeAction.strength : 0;
           const sysopInterfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-          const defenseTotal = playerRoll + int + interfaceLvl + progStr + sysopInterfaceBonus;
+          const currentInt = useMeatspaceStore.getState().getCurrentInt();
+          const defenseTotal = playerRoll + currentInt + interfaceLvl + progStr + sysopInterfaceBonus;
 
           addLog(`> SYSOP ${sysop.name.toUpperCase()} ATTACKING WITH ${bestProg.name.toUpperCase()}!`);
           addLog(`> SYSOP: D10(${sysopRoll}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${attackTotal}`);
-          addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0) = ${defenseTotal}`);
+          addLog(`> DEFENSE: D10(${playerRoll}) + INT(${currentInt}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${sysopInterfaceBonus !== 0 ? ` + IFACE(${sysopInterfaceBonus})` : ''} = ${defenseTotal}`);
 
           if (attackTotal > defenseTotal) {
             let damage = Math.floor(Math.random() * 3) + 1;
@@ -708,13 +755,17 @@ export function TheNet({ onJackOut }) {
               addLog(`> FLAK INTERFERENCE REDUCED SYSOP DAMAGE: -1.`);
             }
 
+            if (finalDamage > 0) {
+              setDamageTaken(true);
+            }
             addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${sysop.name.toUpperCase()}!`);
-            takeDamage(finalDamage);
+            takeNeuralDamage(finalDamage);
             sfx.damage();
 
-            if (useMeatspaceStore.getState().health === 0) {
+            if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
               addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
               sfx.flatline();
+              awardIp();
               setTimeout(() => onJackOut(), 1500);
             }
           } else {
@@ -783,16 +834,17 @@ export function TheNet({ onJackOut }) {
             const playerRoll = Math.floor(Math.random() * 10) + 1;
             const bestProg = sysop.programs.length > 0 ? sysop.programs.reduce((best, p) => p.strength > best.strength ? p : best, sysop.programs[0]) : { strength: 0, name: 'Null' };
             const attackTotal = sysopRoll + sysop.int + sysop.interfaceLvl + bestProg.strength + sysop.deckBonus;
-            const { int, interfaceLvl, takeDamage } = useMeatspaceStore.getState();
+            const { int, interfaceLvl, takeNeuralDamage } = useMeatspaceStore.getState();
             const { activePassives } = useCyberdeckStore.getState();
             const activeAction = useCyberdeckStore.getState().activeAction;
             const progStr = activeAction ? activeAction.strength : 0;
             const sysopInterfaceBonus2 = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-            const defenseTotal = playerRoll + int + interfaceLvl + progStr + sysopInterfaceBonus2;
+            const currentInt = useMeatspaceStore.getState().getCurrentInt();
+            const defenseTotal = playerRoll + currentInt + interfaceLvl + progStr + sysopInterfaceBonus2;
 
             addLog(`> SYSOP ${sysop.name.toUpperCase()} ATTACKING WITH ${bestProg.name.toUpperCase()}!`);
             addLog(`> SYSOP: D10(${sysopRoll}) + INT(${sysop.int}) + INTF(${sysop.interfaceLvl}) + PROG(${bestProg.strength}) + DECK(+${sysop.deckBonus}) = ${attackTotal}`);
-            addLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${sysopInterfaceBonus2 !== 0 ? ` + IFACE(${sysopInterfaceBonus2})` : ''} = ${defenseTotal}`);
+            addLog(`> DEFENSE: D10(${playerRoll}) + INT(${currentInt}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${sysopInterfaceBonus2 !== 0 ? ` + IFACE(${sysopInterfaceBonus2})` : ''} = ${defenseTotal}`);
 
             if (attackTotal > defenseTotal) {
               let damage = Math.floor(Math.random() * 3) + 1;
@@ -844,12 +896,13 @@ export function TheNet({ onJackOut }) {
               }
 
               addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${sysop.name.toUpperCase()}!`);
-              takeDamage(finalDamage);
+              takeNeuralDamage(finalDamage);
               sfx.damage();
 
-              if (useMeatspaceStore.getState().health === 0) {
+              if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
                 addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
                 sfx.flatline();
+                awardIp();
                 setTimeout(() => onJackOut(), 1500);
               }
             } else {
@@ -943,7 +996,8 @@ export function TheNet({ onJackOut }) {
     const isSolid = entitiesAtTarget.some((ent) => ent.isWall || ent.isIce || ent.isCPU || ent.isSysop || ent.isController);
 
     const interfaceType = useMeatspaceStore.getState().interfaceType;
-    const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
+    const deckType = useCyberdeckStore.getState().deckType;
+    const interfaceBonus = deckType === 'brainware' ? 2 : (interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0);
 
     let turnSpent = false;
 
@@ -1462,6 +1516,7 @@ export function TheNet({ onJackOut }) {
               addLog(`> WARNING: ${sysops.length} SYSOP${sysops.length > 1 ? 'S' : ''} STILL ACTIVE. TRACE PLANT DETECTED. +${traceGain} TRACE.`);
               sfx.damage();
             }
+            awardIp();
             onJackOut();
           }} className="bg-black border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors font-bold text-sm sm:text-base shadow-2xl">
             [ EMERGENCY JACK OUT ]
@@ -1474,7 +1529,8 @@ export function TheNet({ onJackOut }) {
             const addLog = useTerminalStore.getState().addLog;
             const { activeAction } = useCyberdeckStore.getState();
             const { int, interfaceLvl, interfaceType } = useMeatspaceStore.getState();
-            const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
+    const timelagPenalty = getTimeLagPenalty(currentLdl);
+    const interfaceBonus = deckType === 'brainware' ? 2 : (interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0) + timelagPenalty;
 
             if (action === 'close') {
               setControllerMenu(null);

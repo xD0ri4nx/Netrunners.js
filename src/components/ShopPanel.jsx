@@ -47,6 +47,8 @@ const PRODUCTS = {
     { id: 'addon_scramble', name: 'Scramble Chip', type: 'scramble', cost: 5000, desc: 'Emergency jack-out without trace penalty. Permanent install.' },
     { id: 'addon_speed', name: 'Speed Chip', type: 'speed', cost: 3000, desc: 'Move 2 cells per turn instead of 1.' },
     { id: 'addon_ripple', name: 'Ripple System', type: 'ripple', cost: 4000, desc: '+1 trace defense per successful routing jump.' },
+    { id: 'addon_timelag_interface', name: 'Time-Lag Buffer (Interface)', type: 'timelag_interface', cost: 350, desc: 'Reduces space-run Interface penalty to flat -2. Aftermarket board.' },
+    { id: 'addon_timelag_reflex', name: 'Time-Lag Buffer (Reflex)', type: 'timelag_reflex', cost: 350, desc: 'Reduces space-run REF/Initiative penalty to flat -2. Aftermarket board.' },
   ],
   upgrades: [
     { id: 'upgrade_mu1', name: 'MU Upgrade +1', amount: 1, cost: 500, desc: 'Increase max MU by 1.' },
@@ -123,6 +125,16 @@ export function ShopPanel({ onClose }) {
             return;
           }
           setInterfaceType(product.id.includes('plugs') ? 'interfacePlugs' : 'trodes');
+        } else if (product.type === 'timelag_interface') {
+          const hasTimelagInterface = useMeatspaceStore.getState().timelagInterface;
+          if (hasTimelagInterface) { sfx.error(); return; }
+          useMeatspaceStore.getState().setTimelagInterface(true);
+          sfx.loot();
+        } else if (product.type === 'timelag_reflex') {
+          const hasTimelagReflex = useMeatspaceStore.getState().timelagReflex;
+          if (hasTimelagReflex) { sfx.error(); return; }
+          useMeatspaceStore.getState().setTimelagReflex(true);
+          sfx.loot();
         }
         break;
       case 'upgrades':

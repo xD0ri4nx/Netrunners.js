@@ -5,6 +5,7 @@ export const useCyberdeckStore = create(
     persist(
         (set) => ({
     deckModel: 'Zetatech Paraline',
+    deckType: 'traditional',
     maxMu: 5,
     usedMu: 0,
     speed: 1,
@@ -14,6 +15,12 @@ export const useCyberdeckStore = create(
     deckHealth: 100,
     maxDeckHealth: 100,
     deckCrashes: 0,
+    neuralCyberware: {
+      neuralProcessor: false,
+      chipwareSocket: false,
+      brainWall: false,
+      psychosisRisk: 0
+    },
 
     programs: [
         { id: 'prog_decrypt', name: 'Decrypt v1.0', type: 'utility', strength: 4 },
@@ -59,11 +66,36 @@ export const useCyberdeckStore = create(
 
     equipDeck: (model, mu, speed, dataWalls) => set({
         deckModel: model,
+        deckType: 'traditional',
         maxMu: mu,
         usedMu: 0,
         speed: speed,
         dataWalls: dataWalls
     }),
+    equipBrainwareDeck: (model, mu, speed) => set({
+        deckModel: model,
+        deckType: 'brainware',
+        maxMu: mu,
+        usedMu: 0,
+        speed: speed,
+        dataWalls: 0
+    }),
+    installNeuralCyberware: (type) => set((state) => ({
+        neuralCyberware: {
+            neuralProcessor: false,
+            chipwareSocket: false,
+            brainWall: false,
+            psychosisRisk: 0,
+            ...state.neuralCyberware,
+            [type]: true
+        }
+    })),
+    increasePsychosisRisk: (amount) => set((state) => ({
+        neuralCyberware: {
+            ...state.neuralCyberware,
+            psychosisRisk: state.neuralCyberware.psychosisRisk + amount
+        }
+    })),
 
     addSpeed: () => set((state) => ({
         speed: state.speed + 1
@@ -99,7 +131,23 @@ export const useCyberdeckStore = create(
     }))
         }),
         {
-            name: 'cyberdeck-storage'
+            name: 'cyberdeck-storage',
+            version: 2,
+            migrate: (persistedState, version) => {
+                if (version === 0 || version === 1) {
+                    return {
+                        ...persistedState,
+                        deckType: 'traditional',
+                        neuralCyberware: {
+                            neuralProcessor: false,
+                            chipwareSocket: false,
+                            brainWall: false,
+                            psychosisRisk: 0
+                        }
+                    };
+                }
+                return persistedState;
+            }
         }
     )
 );
