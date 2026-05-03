@@ -11,10 +11,6 @@ import { useMissionStore } from './store/missionStore';
 import { sfx } from './utils/sfx';
 import { ShopPanel } from './components/ShopPanel';
 import { RepairPanel } from './components/RepairPanel';
-import { BrainwarePanel } from './components/BrainwarePanel';
-import RipperdocPanel from './components/RipperdocPanel';
-import FixerPanel from './components/FixerPanel';
-import StockTicker from './components/StockTicker';
 
 export default function App() {
   const [state, send] = useMachine(gamePhaseMachine);
@@ -24,9 +20,6 @@ export default function App() {
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [showProgramming, setShowProgramming] = useState(false);
   const [showRepair, setShowRepair] = useState(false);
-  const [showBrainware, setShowBrainware] = useState(false);
-  const [showRipperdoc, setShowRipperdoc] = useState(false);
-  const [showFixer, setShowFixer] = useState(false);
 
   const [rivalEncounter, setRivalEncounter] = useState(null);
 
@@ -52,7 +45,7 @@ export default function App() {
         return;
       }
 
-      useMeatspaceStore.getState().healNeuralDamage(100);
+      useMeatspaceStore.getState().heal();
       resetRoute();
 
       const currentMission = useMissionStore.getState();
@@ -196,33 +189,6 @@ export default function App() {
             {state.matches('safehouse') && (
                 <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-sm px-4">
                   <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-4 animate-pulse text-red-500 tracking-widest">SYSTEM READY</h1>
-                  <div className="w-full bg-black/80 border border-neon-green/50 p-3 text-xs font-mono">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-gray-400">IP AVAILABLE:</span>
-                      <span className="text-yellow-400">{useMeatspaceStore.getState().ip} IP</span>
-                    </div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-gray-400">INT (Current/Max):</span>
-                      <span className="text-neon-green">{useMeatspaceStore.getState().getCurrentInt()}/{useMeatspaceStore.getState().maxInt}</span>
-                    </div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-gray-400">Neural Damage:</span>
-                      <span className="text-red-400">{useMeatspaceStore.getState().neuralDamage}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">REF:</span>
-                      <span className="text-neon-green">{useMeatspaceStore.getState().ref}</span>
-                    </div>
-                    <div className="mt-2 border-t border-neon-green/30 pt-2">
-                      <p className="text-gray-500 text-[10px] mb-1">SKILLS:</p>
-                      {Object.entries(useMeatspaceStore.getState().skills).map(([skill, val]) => (
-                        <div key={skill} className="flex justify-between">
-                          <span className="text-gray-400 capitalize">{skill}:</span>
-                          <span className="text-cyan-400">{val} <button onClick={() => useMeatspaceStore.getState().increaseSkill(skill)} className="text-[10px] text-yellow-500 hover:text-yellow-300 ml-1">[+]</button></span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                   <button onClick={() => handleAction('OPEN_NAVIGATOR')} className="bg-green-950 text-white w-full px-4 py-4 sm:px-8 text-xl sm:text-2xl font-bold border-2 border-neon-green shadow-[0_0_15px_#00ffcc] hover:bg-neon-green hover:text-black transition-all cursor-pointer">
                     [ RUN THE NET ]
                   </button>
@@ -239,15 +205,6 @@ export default function App() {
                   </button>
                   <button onClick={() => { sfx.click(); send({ type: 'OPEN_REPAIR' }); }} className="bg-black text-yellow-400 w-full px-4 py-3 border border-yellow-400/50 hover:bg-yellow-400 hover:text-black transition-all cursor-pointer">
                     [ REPAIR DECK ]
-                  </button>
-                  <button onClick={() => { sfx.click(); setShowBrainware(true); }} className="bg-black text-purple-400 w-full px-4 py-3 border border-purple-400/50 hover:bg-purple-400 hover:text-black transition-all cursor-pointer">
-                    [ BRAINWARE BLOWOUT ]
-                  </button>
-                  <button onClick={() => { sfx.click(); setShowRipperdoc(true); }} className="bg-black text-pink-400 w-full px-4 py-3 border border-pink-400/50 hover:bg-pink-400 hover:text-black transition-all cursor-pointer">
-                    [ RIPPERDOC CLINIC ]
-                  </button>
-                  <button onClick={() => { sfx.click(); setShowFixer(true); }} className="bg-black text-yellow-400 w-full px-4 py-3 border border-yellow-400/50 hover:bg-yellow-400 hover:text-black transition-all cursor-pointer">
-                    [ FACTION FIXERS ]
                   </button>
                 </div>
             )}
@@ -325,17 +282,17 @@ export default function App() {
             {state.matches('rival_encounter') && rivalEncounter && (() => {
               const resolveFight = () => {
                 const { int, interfaceLvl, takeDamage, health, interfaceType } = useMeatspaceStore.getState();
-                const { activeAction } = useCyberdeckStore.getState();
+                const { combatBonus, activeAction } = useCyberdeckStore.getState();
                 const addLog = useTerminalStore.getState().addLog;
                 const playerRoll = Math.floor(Math.random() * 10) + 1;
                 const rivalRoll = Math.floor(Math.random() * 10) + 1;
                 const progStr = activeAction ? activeAction.strength : 0;
                 const interfaceBonus = interfaceType === 'interfacePlugs' ? 1 : interfaceType === 'trodes' ? -1 : 0;
-                const attackTotal = playerRoll + int + interfaceLvl + progStr + interfaceBonus;
+                const attackTotal = playerRoll + int + interfaceLvl + progStr + combatBonus + interfaceBonus;
                 const defenseTotal = rivalRoll + rivalEncounter.int + rivalEncounter.interfaceLvl + rivalEncounter.progStr + rivalEncounter.deckBonus;
 
                 addLog(`> RIVAL COMBAT: ${rivalEncounter.name.toUpperCase()}`);
-                addLog(`> YOU: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+                addLog(`> YOU: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${progStr}) + DECK(+${combatBonus})${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
                 addLog(`> RIVAL: D10(${rivalRoll}) + INT(${rivalEncounter.int}) + INTF(${rivalEncounter.interfaceLvl}) + PROG(${rivalEncounter.progStr}) + DECK(+${rivalEncounter.deckBonus}) = ${defenseTotal}`);
 
                 if (attackTotal > defenseTotal) {
@@ -432,8 +389,8 @@ export default function App() {
           </div>
           <p>&gt; MODEL: {cyberdeck.deckModel}</p>
           <p>&gt; MEMORY: {cyberdeck.usedMu} / {cyberdeck.maxMu} MU</p>
-          {false && (
-              <p className="text-yellow-400 font-bold">&gt; DECK SPEED: +{cyberdeck.speed}</p>
+          {cyberdeck.combatBonus > 0 && (
+              <p className="text-yellow-400 font-bold">&gt; DECK COMBAT BONUS: +{cyberdeck.combatBonus}</p>
           )}
           {cyberdeck.coprocessors > 0 && (
               <p className="text-teal-400 font-bold">&gt; COPROCESSORS: {cyberdeck.coprocessors} ({cyberdeck.coprocessors} EXTRA ACTION{cyberdeck.coprocessors > 1 ? 'S' : ''})</p>
@@ -493,17 +450,6 @@ export default function App() {
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
             <RepairPanel onClose={() => setShowRepair(false)} />
           </div>
-        )}
-        {showBrainware && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
-            <BrainwarePanel onClose={() => setShowBrainware(false)} />
-          </div>
-        )}
-        {showRipperdoc && (
-          <RipperdocPanel onClose={() => setShowRipperdoc(false)} />
-        )}
-        {showFixer && (
-          <FixerPanel onClose={() => setShowFixer(false)} />
         )}
       </div>
   );
