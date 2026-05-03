@@ -1,5 +1,5 @@
 import { useMachine } from '@xstate/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { gamePhaseMachine } from './machine/gamePhaseMachine';
 import { TheNet } from './components/TheNet';
 import { WorldMap } from './components/WorldMap';
@@ -10,7 +10,11 @@ import { useRoutingStore } from './store/routingStore';
 import { useMissionStore } from './store/missionStore';
 import { sfx } from './utils/sfx';
 import { ShopPanel } from './components/ShopPanel';
-import { RepairPanel } from './components/RepairPanel';
+import { TechiePanel } from './components/TechiePanel';
+import { ProgrammingPanel } from './components/ProgrammingPanel';
+import { BrainwarePanel } from './components/BrainwarePanel';
+import RipperdocPanel from './components/RipperdocPanel';
+import FixerPanel from './components/FixerPanel';
 
 export default function App() {
   const [state, send] = useMachine(gamePhaseMachine);
@@ -19,7 +23,13 @@ export default function App() {
   const [showLeftPanel, setShowLeftPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [showProgramming, setShowProgramming] = useState(false);
-  const [showRepair, setShowRepair] = useState(false);
+  const [showTechie, setShowTechie] = useState(false);
+  const [showRipperdoc, setShowRipperdoc] = useState(false);
+  const [showFixer, setShowFixer] = useState(false);
+  const [showBrainware, setShowBrainware] = useState(false);
+
+  const [showFoodMenu, setShowFoodMenu] = useState(false);
+  const foodMenuRef = useRef(null);
 
   const [rivalEncounter, setRivalEncounter] = useState(null);
 
@@ -37,6 +47,18 @@ export default function App() {
   };
 
   useEffect(() => {
+    function handleClickOutside(event) {
+      if (foodMenuRef.current && !foodMenuRef.current.contains(event.target)) {
+        setShowFoodMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [foodMenuRef]);
+
+  useEffect(() => {
     if (state.matches('safehouse')) {
       const currentTraceRisk = useRoutingStore.getState().traceRisk;
       if (currentTraceRisk >= 20) {
@@ -47,6 +69,20 @@ export default function App() {
 
       useMeatspaceStore.getState().heal();
       resetRoute();
+      
+      // Phase 17: End immersion mode and calculate penalties
+      const meatspaceStore = useMeatspaceStore.getState();
+      if (meatspaceStore.isImmersionMode) {
+        const result = meatspaceStore.endImmersion();
+        useTerminalStore.getState().addLog(`> ${result.message}`);
+        if (meatspaceStore.systemShockActive) {
+          useTerminalStore.getState().addLog(`> SYSTEM SHOCK ACTIVE. -${meatspaceStore.int}/${meatspaceStore.ref} FOR ${meatspaceStore.systemShockHours}h.`);
+        }
+      }
+      // Process system shock countdown if active
+      if (meatspaceStore.systemShockActive) {
+        meatspaceStore.processSystemShock();
+      }
 
       const currentMission = useMissionStore.getState();
       if (currentMission.activeJob && currentMission.payloadSecured) {
@@ -93,7 +129,7 @@ export default function App() {
   }, [missionStore.availableJobs.length]);
 
   return (
-      <div className="h-screen w-screen bg-terminal-black text-neon-green flex flex-col md:grid md:grid-cols-[280px_1fr_280px] lg:grid-cols-[300px_1fr_300px] md:grid-rows-[1fr_150px] overflow-hidden crt-flicker relative">
+      <div className="h-screen w-screen bg-terminal-black text-neon-green flex flex-col overflow-hidden crt-flicker relative">
         <div className="crt-overlay pointer-events-none z-50"></div>
 
         {/* MOBILE HEADER */}
@@ -103,9 +139,12 @@ export default function App() {
           <button onClick={() => {setShowRightPanel(!showRightPanel); setShowLeftPanel(false);}} className="border border-neon-green px-2 py-1 active:bg-neon-green active:text-black">[ CYBERDECK ]</button>
         </div>
 
+        {/* DESKTOP LAYOUT WRAPPER */}
+        <div className="flex-1 flex overflow-hidden">
+
         {/* LEFT PANEL: MEATSPACE */}
-        <div className={`fixed inset-y-0 left-0 w-4/5 max-w-sm bg-black/95 border-r border-neon-green/30 p-4 flex flex-col gap-4 z-50 transform transition-transform duration-300 overflow-y-auto shadow-2xl md:relative md:translate-x-0 md:w-auto md:bg-black/80 md:col-start-1 md:row-start-1 md:shadow-none
-        ${showLeftPanel ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className={`w-[240px] flex-shrink-0 bg-black/95 border-r border-neon-green/30 p-4 flex flex-col gap-4 overflow-y-auto scrollbar-hide shadow-2xl md:relative
+        ${showLeftPanel || true ? '' : 'hidden'} md:block`}>
 
           <div className="flex justify-between items-center border-b border-neon-green pb-2">
             <h2 className="text-xl font-bold uppercase tracking-widest text-shadow-glow">Meatspace</h2>
@@ -120,9 +159,155 @@ export default function App() {
               </p>
           )}
           <p className={`mt-2 font-bold ${meatspace.health <= 3 ? 'text-red-500 animate-pulse' : 'text-neon-green'}`}>
-            &gt; NEURAL HP: {meatspace.health} / {meatspace.maxHealth}
+            {meatspace.isFBC ? (
+              <>
+                <p className="text-xs font-bold text-orange-400">&gt; SDP (STRUCTURAL):</p>
+                <div className="text-xs text-gray-400 grid grid-cols-2 gap-1 ml-2">
+                  <span>HEAD: {meatspace.sdp?.head || 0}</span>
+                  <span>L.ARM: {meatspace.sdp?.lArm || 0}</span>
+                  <span>R.ARM: {meatspace.sdp?.rArm || 0}</span>
+                  <span>L.LEG: {meatspace.sdp?.lLeg || 0}</span>
+                  <span>R.LEG: {meatspace.sdp?.rLeg || 0}</span>
+                  <span>TORSO: {meatspace.sdp?.torso || 0}</span>
+                </div>
+                {meatspace.currentChassis && (
+                  <p className="text-xs text-cyan-400 mt-1">[ {meatspace.ownedChassis?.find(c => c.id === meatspace.currentChassis)?.name || 'UNKNOWN'} ]</p>
+                )}
+              </>
+            ) : (
+              <p className={`mt-2 font-bold ${meatspace.health <= 3 ? 'text-red-500 animate-pulse' : 'text-neon-green'}`}>
+                &gt; NEURAL HP: {meatspace.health} / {meatspace.maxHealth}
+              </p>
+            )}
           </p>
           <p className="mt-4 text-yellow-400 font-bold">&gt; FUNDS: {meatspace.funds} eb</p>
+
+          {/* HOUSING INFO */}
+          <div className="mt-3 border-t border-neon-green/30 pt-3">
+            {meatspace.isStreet ? (
+              <p className="text-xs text-red-400 font-bold">&gt; HOMELESS (NO SAFEHOUSE)</p>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-neon-green">&gt; HOUSING:</p>
+                <p className="text-xs text-gray-400">
+                  {meatspace.housingType === 'coffin' && 'COFFIN/CUBE (Combat Zone)'}
+                  {meatspace.housingType === 'apartment' && 'STUDIO APARTMENT (Moderate Zone)'}
+                  {meatspace.housingType === 'penthouse' && 'CORPORATE PENTHOUSE (High Zone)'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  Rent: {meatspace.housingCost} eb/month | Due in: {Math.max(0, meatspace.daysPerMonth - meatspace.daysPassedInMonth)} days
+                </p>
+                {meatspace.housingType === 'penthouse' && (
+                  <p className="text-xs text-cyan-400">[CLEAN LANDLINE: -2 TRACE RISK]</p>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* HUNGER INFO */}
+          <div className="mt-3 border-t border-neon-green/30 pt-3">
+            <p className="text-xs font-bold text-neon-green">&gt; HUNGER:</p>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-full bg-gray-900 h-2 border border-gray-600">
+                <div 
+                  className={`h-full transition-all ${meatspace.hunger > 30 ? 'bg-green-600' : meatspace.hunger > 0 ? 'bg-yellow-600' : 'bg-red-600 animate-pulse'}`}
+                  style={{ width: `${meatspace.hunger}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 w-12">{meatspace.hunger}%</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Diet: {meatspace.foodType === 'kibble' && 'KIBBLE (50 eb)'}
+              {meatspace.foodType === 'prepack' && 'PREPACK (150 eb)'}
+              {meatspace.foodType === 'fresh' && 'FRESH (500 eb)'}
+            </p>
+            {meatspace.starvingDays > 0 && (
+              <p className="text-xs text-red-400 animate-pulse">
+                STARVING: {meatspace.starvingDays} DAYS! -1 INT/REF AT 3 DAYS
+              </p>
+            )}
+            {meatspace.freshFoodBonus && (
+              <p className="text-xs text-green-400">FRESH FOOD BONUS: +1 {meatspace.freshFoodBonus.stat.toUpperCase()}</p>
+            )}
+          </div>
+
+          {/* SLEEP INFO */}
+          <div className="mt-3 border-t border-neon-green/30 pt-3">
+            <p className="text-xs font-bold text-neon-green">&gt; SLEEP:</p>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-full bg-gray-900 h-2 border border-gray-600">
+                <div 
+                  className={`h-full transition-all ${meatspace.sleep > 30 ? 'bg-blue-600' : meatspace.sleep > 0 ? 'bg-yellow-600' : 'bg-red-600 animate-pulse'}`}
+                  style={{ width: `${meatspace.sleep}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-400 w-12">{meatspace.sleep}%</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Hours Awake: {meatspace.hoursAwake} | Stimulants: {meatspace.stimulants}
+            </p>
+            {meatspace.hoursAwake > 16 && (
+              <p className="text-xs text-red-400 animate-pulse">
+                DEPRIVATION: -{Math.floor((meatspace.hoursAwake - 16) / 8)} INT/REF PER 8h
+              </p>
+            )}
+            {meatspace.isStimulated && (
+              <p className="text-xs text-purple-400">STIMULANT ACTIVE (+8h Awake, -10 Sleep)</p>
+            )}
+          </div>
+
+          {/* TELECOM INFO */}
+          <div className="mt-3 border-t border-neon-green/30 pt-3">
+            <p className="text-xs font-bold text-neon-green">&gt; TELECOM:</p>
+            <p className="text-xs text-gray-400">
+              Bill: {meatspace.telecomBill} eb | Routing Time: {meatspace.routingMinutes} min
+            </p>
+            <p className="text-xs text-gray-400">
+              Landline: {meatspace.housingCost > 0 ? 'ACTIVE' : 'INACTIVE'}
+            </p>
+          </div>
+
+          {/* IMMERSION HARDWARE INFO */}
+          <div className="mt-3 border-t border-neon-green/30 pt-3">
+            <p className="text-xs font-bold text-purple-400">&gt; IMMERSION:</p>
+            {meatspace.hasBodyweightSystem ? (
+              <>
+                <p className="text-xs text-gray-400">
+                  BODYWEIGHT: EQUIPPED
+                </p>
+                <p className="text-xs text-gray-400">
+                  Nutrient Packs: {meatspace.nutrientPacks} | Max: {meatspace.hasDataCreche ? '96h' : '72h'}
+                </p>
+                {meatspace.systemShockActive && (
+                  <p className="text-xs text-red-400 font-bold animate-pulse">
+                    SYSTEM SHOCK: -{meatspace.int}/{meatspace.ref} FOR {meatspace.systemShockHours}h
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-gray-500">NO IMMERSION SYSTEM</p>
+            )}
+            {meatspace.crecheInstalled && (
+              <p className="text-xs text-purple-400">[DATA CRECHE: ACTIVE]</p>
+            )}
+          </div>
+
+          {/* INSTALLED CYBERWARE */}
+          {meatspace.cyberware && meatspace.cyberware.length > 0 && (
+            <div className="mt-4 border-t border-neon-green/30 pt-3">
+              <p className="text-xs font-bold text-cyan-400 mb-2">&gt; CYBERWARE:</p>
+              <div className="space-y-1">
+                {meatspace.cyberware.map((ware) => (
+                  <div key={ware.id} className="text-xs flex justify-between items-center border border-cyan-500/30 bg-cyan-900/10 px-2 py-1">
+                    <span className="text-cyan-300">{ware.name}</span>
+                    {ware.humanityCost > 0 && (
+                      <span className="text-red-400 text-[10px]">-{ware.humanityCost} HUM</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {missionStore.activeJob && (
               <div className={`mt-4 border p-2 ${missionStore.activeJob.isHeist ? 'border-orange-500/50 bg-orange-900/20' : 'border-blue-500/50 bg-blue-900/20'}`}>
@@ -144,7 +329,7 @@ export default function App() {
         </div>
 
         {/* CENTER VIEWPORT */}
-        <div className="flex-1 p-2 md:p-4 md:col-start-2 md:row-start-1 flex items-center justify-center relative z-0 overflow-hidden">
+        <div className="flex-1 p-2 md:p-4 flex items-center justify-center relative z-0 overflow-hidden min-w-0">
           <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#00ffcc_1px,transparent_1px),linear-gradient(to_bottom,#00ffcc_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
           <div className="relative text-center w-full flex justify-center pointer-events-auto h-full items-center overflow-y-auto">
 
@@ -203,8 +388,247 @@ export default function App() {
                   <button onClick={() => { sfx.click(); setShowProgramming(true); }} className="bg-black text-purple-400 w-full px-4 py-3 border border-purple-400/50 hover:bg-purple-400 hover:text-black transition-all cursor-pointer">
                     [ CUSTOM PROGRAMMING ]
                   </button>
-                  <button onClick={() => { sfx.click(); send({ type: 'OPEN_REPAIR' }); }} className="bg-black text-yellow-400 w-full px-4 py-3 border border-yellow-400/50 hover:bg-yellow-400 hover:text-black transition-all cursor-pointer">
-                    [ REPAIR DECK ]
+                  <button onClick={() => { sfx.click(); setShowTechie(true); }} className={`w-full px-4 py-3 border transition-all cursor-pointer ${meatspace.isFBC ? 'bg-black text-orange-400 border-orange-400/50 hover:bg-orange-400 hover:text-black' : 'bg-black text-yellow-400 border-yellow-400/50 hover:bg-yellow-400 hover:text-black'}`}>
+                    [ TECHIE VISIT ]
+                  </button>
+                  {meatspace.isFBC && meatspace.ownedChassis.length > 1 && (
+                    <button 
+                      onClick={() => {
+                        sfx.click();
+                        // Show chassis swap modal
+                        const chassisOptions = meatspace.ownedChassis.map(c => `${c.name} (${c.id === meatspace.currentChassis ? 'ACTIVE' : 'IDLE'})`).join(', ');
+                        useTerminalStore.getState().addLog(`> OWNED CHASSIS: ${chassisOptions}`);
+                      }}
+                      className="bg-black text-cyan-400 w-full px-4 py-2 border border-cyan-400/50 hover:bg-cyan-400 hover:text-black transition-all cursor-pointer text-xs"
+                    >
+                      [ SWAP CHASSIS ]
+                    </button>
+                  )}
+                  <button onClick={() => { sfx.click(); setShowBrainware(true); }} className="bg-black text-pink-400 w-full px-4 py-3 border border-pink-400/50 hover:bg-pink-400 hover:text-black transition-all cursor-pointer">
+                    [ BRAINWARE ]
+                  </button>
+                  <button onClick={() => { sfx.click(); setShowRipperdoc(true); }} className="bg-black text-red-400 w-full px-4 py-3 border border-red-400/50 hover:bg-red-400 hover:text-black transition-all cursor-pointer">
+                    [ RIPPERDOC ]
+                  </button>
+                  <button onClick={() => { sfx.click(); setShowFixer(true); }} className="bg-black text-orange-400 w-full px-4 py-3 border border-orange-400/50 hover:bg-orange-400 hover:text-black transition-all cursor-pointer">
+                    [ FIXER ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const meatspace = useMeatspaceStore.getState();
+                      // Check and pay rent if due
+                      if (meatspace.daysPassedInMonth >= meatspace.daysPerMonth) {
+                        if (meatspace.funds >= meatspace.housingCost) {
+                          meatspace.deductFunds(meatspace.housingCost);
+                          useTerminalStore.getState().addLog(`> RENT PAID: ${meatspace.housingCost} eb. NEW MONTH STARTED.`);
+                        } else {
+                          useMeatspaceStore.setState({ isStreet: true, housingType: 'street', housingCost: 0, daysPassedInMonth: 0 });
+                          useTerminalStore.getState().addLog(`> WARNING: RENT UNPAID. SAFEHOUSE LOST. HOMELESS.`);
+                        }
+                        useMeatspaceStore.setState({ daysPassedInMonth: 0 });
+                      } else {
+                        useMeatspaceStore.setState({ daysPassedInMonth: meatspace.daysPassedInMonth + 1 });
+                        useTerminalStore.getState().addLog(`> TIME PASSED. DAYS: ${meatspace.daysPassedInMonth + 1}/${meatspace.daysPerMonth}.`);
+                        // Process hunger each day
+                        useMeatspaceStore.getState().processDayHunger();
+                        // Process sleep each day
+                        useMeatspaceStore.getState().processDaySleep();
+                      }
+                    }} 
+                    className="bg-black text-gray-400 w-full px-4 py-3 border border-gray-500/50 hover:bg-gray-500 hover:text-black transition-all cursor-pointer"
+                  >
+                    [ PASS DAY ]
+                  </button>
+                  <div className="relative w-full" ref={foodMenuRef}>
+                    <button 
+                      onClick={() => {
+                        sfx.click();
+                        setShowFoodMenu(!showFoodMenu);
+                      }} 
+                      className="bg-black text-yellow-400 w-full px-4 py-3 border border-yellow-500/50 hover:bg-yellow-500 hover:text-black transition-all cursor-pointer font-bold flex justify-between items-center"
+                    >
+                      <span>[ EAT ]</span>
+                      <span>{showFoodMenu ? '▲' : '▼'}</span>
+                    </button>
+                    
+                    {showFoodMenu && (
+                      <div className="absolute top-full left-0 w-full bg-black border-2 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] z-50 mt-1 animate-dropdown">
+                        <div className="p-2 border-b border-yellow-500/30 bg-yellow-500/10 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-yellow-500 tracking-tighter uppercase">Nutrition Status</span>
+                          <span className="text-[10px] font-bold text-yellow-500 uppercase">HUNGER: {meatspace.hunger}%</span>
+                        </div>
+                        
+                        <div className="flex flex-col">
+                          <button 
+                            onClick={() => {
+                              sfx.click();
+                              const result = useMeatspaceStore.getState().eatFood('prepack');
+                              useTerminalStore.getState().addLog(`> ${result.message}`);
+                              setShowFoodMenu(false);
+                            }} 
+                            disabled={meatspace.funds < 150}
+                            className={`px-4 py-3 text-left transition-all flex justify-between items-center border-b border-yellow-500/20 last:border-0
+                              ${meatspace.funds >= 150 ? 'text-yellow-400 hover:bg-yellow-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">○ PREPACK</span>
+                              <span className="text-[10px] opacity-70">+60 HUNGER</span>
+                            </div>
+                            <span className="font-bold text-xs">150 eb</span>
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              sfx.click();
+                              const result = useMeatspaceStore.getState().eatFood('kibble');
+                              useTerminalStore.getState().addLog(`> ${result.message}`);
+                              setShowFoodMenu(false);
+                            }} 
+                            disabled={meatspace.funds < 50}
+                            className={`px-4 py-3 text-left transition-all flex justify-between items-center border-b border-yellow-500/20 last:border-0
+                              ${meatspace.funds >= 50 ? 'text-orange-400 hover:bg-orange-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">○ KIBBLE</span>
+                              <span className="text-[10px] opacity-70">-1 HUMANITY</span>
+                            </div>
+                            <span className="font-bold text-xs">50 eb</span>
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              sfx.click();
+                              const result = useMeatspaceStore.getState().eatFood('fresh');
+                              useTerminalStore.getState().addLog(`> ${result.message}`);
+                              setShowFoodMenu(false);
+                            }} 
+                            disabled={meatspace.funds < 500}
+                            className={`px-4 py-3 text-left transition-all flex justify-between items-center
+                              ${meatspace.funds >= 500 ? 'text-green-400 hover:bg-green-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">○ FRESH</span>
+                              <span className="text-[10px] opacity-70">+1 INT (24H)</span>
+                            </div>
+                            <span className="font-bold text-xs">500 eb</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().rest();
+                      useTerminalStore.getState().addLog(`> RESTED. SLEEP RESTORED TO 100%.`);
+                    }} 
+                    className="bg-black text-blue-400 w-full px-4 py-2 border border-blue-500/50 hover:bg-blue-500 hover:text-black transition-all cursor-pointer text-xs"
+                  >
+                    [ REST (FULLY RESTORE SLEEP) ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().useStimulant();
+                      useTerminalStore.getState().addLog(`> ${result.message}`);
+                    }} 
+                    disabled={meatspace.stimulants <= 0}
+                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.stimulants > 0 ? 'bg-black text-purple-400 border-purple-500/50 hover:bg-purple-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                  >
+                    [ USE STIMULANT ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().buyStimulants(1);
+                      useTerminalStore.getState().addLog(`> ${result.message}`);
+                    }} 
+                    disabled={meatspace.funds < 100}
+                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.funds >= 100 ? 'bg-black text-pink-400 border-pink-500/50 hover:bg-pink-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                  >
+                    [ BUY STIMULANT (100 eb) ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().payTelecomBill();
+                      useTerminalStore.getState().addLog(`> ${result.message}`);
+                    }} 
+                    disabled={meatspace.telecomBill <= 0 || meatspace.funds < meatspace.telecomBill}
+                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.telecomBill > 0 && meatspace.funds >= meatspace.telecomBill ? 'bg-black text-teal-400 border-teal-500/50 hover:bg-teal-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                  >
+                    [ PAY TELECOM ({meatspace.telecomBill} eb) ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().utilityFraud();
+                      useTerminalStore.getState().addLog(`> ${result.message}`);
+                    }} 
+                    disabled={meatspace.telecomBill <= 0}
+                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.telecomBill > 0 ? 'bg-black text-red-400 border-red-500/50 hover:bg-red-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                  >
+                    [ UTILITY FRAUD (Prog+D10 vs 20) ]
+                  </button>
+                  {!meatspace.isStreet && (
+                    <button 
+                      onClick={() => {
+                        sfx.click();
+                        // Simple housing upgrade cycle: apartment -> penthouse -> coffin
+                        const current = meatspace.housingType;
+                        if (current === 'apartment' && meatspace.funds >= 3000) {
+                          useMeatspaceStore.getState().deductFunds(3000);
+                          useMeatspaceStore.setState({ housingType: 'penthouse', housingCost: 1000 });
+                          useTerminalStore.getState().addLog(`> HOUSING UPGRADED: CORPORATE PENTHOUSE (1000 eb/month).`);
+                        } else if (current === 'penthouse' && meatspace.funds >= 100) {
+                          useMeatspaceStore.getState().deductFunds(100);
+                          useMeatspaceStore.setState({ housingType: 'coffin', housingCost: 150 });
+                          useTerminalStore.getState().addLog(`> HOUSING DOWNGRADED: COFFIN/CUBE (150 eb/month).`);
+                        } else if (current === 'coffin' && meatspace.funds >= 200) {
+                          useMeatspaceStore.getState().deductFunds(200);
+                          useMeatspaceStore.setState({ housingType: 'apartment', housingCost: 200 });
+                          useTerminalStore.getState().addLog(`> HOUSING UPGRADED: STUDIO APARTMENT (200 eb/month).`);
+                        } else {
+                          useTerminalStore.getState().addLog(`> ERROR: INSUFFICIENT FUNDS OR ALREADY AT TARGET.`);
+                        }
+                      }} 
+                      className="bg-black text-cyan-400 w-full px-4 py-3 border border-cyan-500/50 hover:bg-cyan-500 hover:text-black transition-all cursor-pointer text-xs"
+                    >
+                      {meatspace.housingType === 'apartment' ? '[ UPGRADE TO PENTHOUSE (3000 eb) ]' : 
+                       meatspace.housingType === 'penthouse' ? '[ DOWNGRADE TO COFFIN (100 eb) ]' : 
+                       '[ UPGRADE TO APARTMENT (200 eb) ]'}
+                    </button>
+                  )}
+                  {/* Phase 17: Bodyweight & Data Creche */}
+                  {!meatspace.hasDataCreche && !meatspace.isStreet && (
+                    <button 
+                      onClick={() => {
+                        sfx.click();
+                        const result = useMeatspaceStore.getState().purchaseDataCreche();
+                        useTerminalStore.getState().addLog(`> ${result.message}`);
+                      }}
+                      disabled={meatspace.funds < 10000 || meatspace.housingType === 'coffin'}
+                      className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.funds >= 10000 && meatspace.housingType !== 'coffin' ? 'bg-black text-purple-400 border-purple-500/50 hover:bg-purple-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                    >
+                      [ INSTALL DATA CRECHE (10000 eb) ]
+                    </button>
+                  )}
+                  {meatspace.hasDataCreche && (
+                    <p className="text-xs text-purple-400 text-center border border-purple-500/30 p-1 bg-purple-900/20">
+                      DATA CRECHE: {meatspace.crecheInstalled ? 'INSTALLED (+96h, +1 SPD/+4 MU/+4 WALL)' : 'NOT INSTALLED'}
+                    </p>
+                  )}
+                  <button 
+                    onClick={() => {
+                      sfx.click();
+                      const result = useMeatspaceStore.getState().buyNutrientPacks(1);
+                      useTerminalStore.getState().addLog(`> ${result.message}`);
+                    }}
+                    disabled={!meatspace.hasBodyweightSystem || meatspace.funds < 100}
+                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.hasBodyweightSystem && meatspace.funds >= 100 ? 'bg-black text-orange-400 border-orange-500/50 hover:bg-orange-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
+                  >
+                    [ BUY NUTRIENT PACK (100 eb) ]
                   </button>
                 </div>
             )}
@@ -380,15 +804,28 @@ export default function App() {
         </div>
 
         {/* RIGHT PANEL: CYBERDECK */}
-        <div className={`fixed inset-y-0 right-0 w-4/5 max-w-sm bg-black/95 border-l border-neon-green/30 p-4 flex flex-col gap-4 z-50 transform transition-transform duration-300 overflow-y-auto shadow-2xl md:relative md:translate-x-0 md:w-auto md:bg-black/80 md:col-start-3 md:row-start-1 md:shadow-none
-        ${showRightPanel ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`w-[240px] flex-shrink-0 bg-black/95 border-l border-neon-green/30 p-4 flex flex-col gap-4 overflow-y-auto scrollbar-hide shadow-2xl md:relative
+        ${showRightPanel || true ? '' : 'hidden'} md:block`}>
 
           <div className="flex justify-between items-center border-b border-neon-green pb-2">
             <button className="md:hidden text-red-500 border border-red-500 px-3 py-1 font-bold" onClick={() => setShowRightPanel(false)}>X</button>
             <h2 className="text-xl font-bold uppercase tracking-widest text-right">Cyberdeck</h2>
           </div>
-          <p>&gt; MODEL: {cyberdeck.deckModel}</p>
-          <p>&gt; MEMORY: {cyberdeck.usedMu} / {cyberdeck.maxMu} MU</p>
+          {(() => {
+            const effectiveStats = useCyberdeckStore.getState().getEffectiveDeckStats();
+            const isCreche = effectiveStats.deckType === 'creche';
+            return (
+              <>
+                <p className={isCreche ? 'text-purple-400 font-bold' : ''}>
+                  &gt; MODEL: {effectiveStats.deckModel}{isCreche ? ' (CRECHE)' : ''}
+                </p>
+                <p className={isCreche ? 'text-purple-400' : ''}>
+                  &gt; MEMORY: {cyberdeck.usedMu} / {effectiveStats.maxMu} MU
+                </p>
+                {isCreche && <p className="text-xs text-purple-400">[+1 SPEED, +4 WALLS]</p>}
+              </>
+            );
+          })()}
           {cyberdeck.combatBonus > 0 && (
               <p className="text-yellow-400 font-bold">&gt; DECK COMBAT BONUS: +{cyberdeck.combatBonus}</p>
           )}
@@ -425,16 +862,22 @@ export default function App() {
             </ul>
           </div>
         </div>
+        </div>
 
         {/* BOTTOM PANEL: TERMINAL LOG */}
-        <div className="h-40 md:h-auto border-t border-neon-green/30 p-2 sm:p-4 md:col-span-3 md:row-start-2 font-mono text-[10px] sm:text-sm overflow-y-auto flex flex-col justify-end bg-black z-20">
-          <div className="opacity-70 flex flex-col justify-end min-h-full">
-            {terminalLogs.map((log, index) => (
-                <p key={index} className={log.includes('WARNING') || log.includes('FAILED') || log.includes('CRITICAL') || log.includes('FLATLINE') || log.includes('ERROR') || log.includes('RAID') ? 'text-red-400' : 'text-neon-green'}>
-                  {log}
-                </p>
-            ))}
-            <p className="animate-pulse">&gt; _</p>
+        <div 
+          className="border-t border-neon-green/30 p-2 sm:p-4 font-mono text-[10px] sm:text-sm bg-black z-20 flex-shrink-0"
+          style={{ height: '140px' }}
+        >
+          <div className="h-full overflow-y-auto scrollbar-hide">
+            <div className="opacity-70">
+              {terminalLogs.map((log, index) => (
+                  <p key={index} className={log.includes('WARNING') || log.includes('FAILED') || log.includes('CRITICAL') || log.includes('FLATLINE') || log.includes('ERROR') || log.includes('RAID') ? 'text-red-400' : 'text-neon-green'}>
+                    {log}
+                  </p>
+              ))}
+              <p className="animate-pulse">&gt; _</p>
+            </div>
           </div>
         </div>
 
@@ -445,11 +888,28 @@ export default function App() {
           </div>
         )}
 
-        {/* REPAIR PANEL */}
-        {showRepair && (
+        {/* TECHIE PANEL */}
+        {showTechie && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
-            <RepairPanel onClose={() => setShowRepair(false)} />
+            <TechiePanel onClose={() => setShowTechie(false)} />
           </div>
+        )}
+
+        {/* BRAINWARE PANEL */}
+        {showBrainware && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+            <BrainwarePanel onClose={() => setShowBrainware(false)} />
+          </div>
+        )}
+
+        {/* RIPPERDOC PANEL */}
+        {showRipperdoc && (
+          <RipperdocPanel onClose={() => setShowRipperdoc(false)} />
+        )}
+
+        {/* FIXER PANEL */}
+        {showFixer && (
+          <FixerPanel onClose={() => setShowFixer(false)} />
         )}
       </div>
   );

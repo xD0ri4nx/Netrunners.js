@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCyberdeckStore } from '../store/cyberdeckStore';
 import { useMeatspaceStore } from '../store/meatspaceStore';
+import { useTerminalStore } from '../store/terminalStore';
 import { sfx } from '../utils/sfx';
 
 const PRODUCTS = {
@@ -35,10 +36,7 @@ const PRODUCTS = {
     { id: 'addon_interface_plugs', name: 'Interface Plugs', type: 'interface', cost: 1500, desc: '+1 to ALL rolls, +50% neural damage taken. Surgical install.' },
     { id: 'addon_trodes', name: 'Trode Set', type: 'interface', cost: 20, desc: '-1 to ALL rolls, safe (no extra neural damage). Non-invasive.' },
     { id: 'addon_keyboard', name: 'Keyboard', type: 'keyboard', cost: 100, desc: 'Standard input device for deck operation.' },
-    { id: 'addon_videoboard', name: 'Videoboard', type: 'videoboard', cost: 100, desc: 'Per sq. ft. Visual display output for deck.' },
     { id: 'addon_printer', name: 'Printer', type: 'printer', cost: 300, desc: 'Hardcopy output device.' },
-    { id: 'addon_chipreader', name: 'Chipreader', type: 'chipreader', cost: 100, desc: 'Reads standard data chips.' },
-    { id: 'addon_extrachips', name: 'Extra Chips', type: 'extrachips', cost: 10, desc: 'Per chip. Additional storage media.' },
     { id: 'addon_voxbox', name: 'Vox Box', type: 'voxbox', cost: 300, desc: 'Voice input/output device.' },
     { id: 'addon_scanner', name: 'Scanner', type: 'scanner', cost: 100, desc: 'Basic scanning device (100eb/sq ft).' },
     { id: 'addon_interface_cables', name: 'Interface Cables', type: 'interface_cables', cost: 20, desc: 'Standard connection cables (20-30eb).' },
@@ -50,10 +48,43 @@ const PRODUCTS = {
     { id: 'addon_timelag_interface', name: 'Time-Lag Buffer (Interface)', type: 'timelag_interface', cost: 350, desc: 'Reduces space-run Interface penalty to flat -2. Aftermarket board.' },
     { id: 'addon_timelag_reflex', name: 'Time-Lag Buffer (Reflex)', type: 'timelag_reflex', cost: 350, desc: 'Reduces space-run REF/Initiative penalty to flat -2. Aftermarket board.' },
   ],
+  hardware: [
+    { id: 'hw_chipreader', name: 'Chipreader', type: 'peripheral', subType: 'chipreader', cost: 800, desc: '1 free consumable program slot (does not use MU). 1-use per run.' },
+    { id: 'hw_hardened', name: 'Hardened Circuitry', type: 'peripheral', subType: 'hardened', cost: 3500, desc: 'Immunity to Firestarter deck-damage effects.' },
+    { id: 'hw_videoboard', name: 'Videoboard', type: 'peripheral', subType: 'videoboard', cost: 1200, desc: '+1 to ambush detection/evasion. Visual link to physical surroundings.' },
+    { id: 'hw_optical', name: 'Optical Deck', type: 'peripheral', subType: 'optical', cost: 5000, desc: 'Reveals hidden ICE within 2 tiles. Reduces fog-of-war.' },
+{ id: 'hw_bodyweight', name: 'Bodyweight Lifesupport', type: 'peripheral', subType: 'bodyweight', cost: 5000, desc: 'Portable immersion system. Freezes hunger/sleep. 72h limit. Uses nutrient packs (100 eb).' },
+    { id: 'hw_nutrient', name: 'Nutrient Pack', type: 'consumable', subType: 'nutrient', cost: 100, desc: 'Consumable for Bodyweight system. Lasts 24h. Buy in bulk.' },
+  ],
   upgrades: [
     { id: 'upgrade_mu1', name: 'MU Upgrade +1', amount: 1, cost: 500, desc: 'Increase max MU by 1.' },
     { id: 'upgrade_speed', name: 'Speed Upgrade +1', amount: 1, cost: 2000, desc: 'Increase deck speed by +1 (max 5).' },
     { id: 'upgrade_datawall', name: 'Data Wall Upgrade +1', amount: 1, cost: 1000, desc: 'Increase data wall strength by +1 (max 10).' },
+  ],
+  safehouse: [
+    { id: 'sh_creche', name: 'Data Creche', type: 'safehouse', subType: 'creche', cost: 10000, desc: 'Safehouse installation (apt/penthouse). Overrides deck: +1 Speed, +12 MU, +4 Walls. 96h immersion. Videoboard alert for external threats.' },
+  ],
+  fbc: [
+    { id: 'fbc_gemini', name: 'Gemini', type: 'fbc', subType: 'chassis', cost: 55000, desc: 'Human-passing. Bypasses security. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF10 MA10 BODY12 SP0' },
+    { id: 'fbc_alpha', name: 'Alpha Class', type: 'fbc', subType: 'chassis', cost: 58000, desc: 'Standard combat. Heavily armored. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF10 MA10 BODY12 SP25' },
+    { id: 'fbc_wingman', name: 'Wingman', type: 'fbc', subType: 'chassis', cost: 54000, desc: 'Aerospace pilot. Immune to G-forces. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF15 MA10 BODY12 SP25' },
+    { id: 'fbc_eclipse', name: 'Eclipse', type: 'fbc', subType: 'chassis', cost: 76000, desc: 'Espionage. Radar-absorbent, silent. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF10 MA12 BODY10 SP15' },
+    { id: 'fbc_aquarius', name: 'Aquarius', type: 'fbc', subType: 'chassis', cost: 65000, desc: 'Deep-sea. Sonar, pressure resistant. SDP: Head30/Arms20/Legs20/Torso50. SPECIAL: Underwater ops', stats: 'REF8 MA10 BODY12 SP15' },
+    { id: 'fbc_fireman', name: 'Fireman', type: 'fbc', subType: 'chassis', cost: 60000, desc: 'Hazard/rescue. Heat/toxin immune. SDP: Head30/Arms30/Legs30/Torso50', stats: 'REF8 MA10 BODY14 SP20' },
+    { id: 'fbc_samson', name: 'Samson', type: 'fbc', subType: 'chassis', cost: 40000, desc: 'Industrial. Massive lifting. SDP: Head30/Arms40/Legs50/Torso60', stats: 'REF6 MA8 BODY18 SP15' },
+    { id: 'fbc_wiseman', name: 'Wiseman', type: 'fbc', subType: 'chassis', cost: 90000, desc: 'Netrunner. Extra MU, Firestarter immune! SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF10 MA10 BODY12 SP15' },
+    { id: 'fbc_dragoon', name: 'Dragoon', type: 'fbc', subType: 'chassis', cost: 120000, desc: 'Military tank. Mount heavy weapons. SDP: Head40/Arms50/Legs50/Torso60', stats: 'REF15 MA25 BODY20 SP40' },
+    { id: 'fbc_spyder', name: 'Spyder', type: 'fbc', subType: 'chassis', cost: 118110, desc: 'Multi-limbed. Wall-crawling. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF12 MA20 BODY12 SP30' },
+    { id: 'fbc_copernicus', name: 'Copernicus', type: 'fbc', subType: 'chassis', cost: 60000, desc: 'Space. Radiation/EMP shielded. SDP: Head30/Arms20/Legs20/Torso40', stats: 'REF11 MA10 BODY12 SP25' },
+    { id: 'fbc_burroughs', name: 'Burroughs', type: 'fbc', subType: 'chassis', cost: 65000, desc: 'Mars. Sandstorm resistant. SDP: Head30/Arms30/Legs40/Torso50', stats: 'REF10 MA10 BODY12 SP30' },
+  ],
+  fbc_upgrades: [
+    { id: 'fbc_overclock_ref', name: 'Overclock REF +1', type: 'fbc', subType: 'overclock_ref', cost: 5000, desc: 'Permanently increase REF by 1 (max +2).' },
+    { id: 'fbc_overclock_ma', name: 'Overclock MA +1', type: 'fbc', subType: 'overclock_ma', cost: 5000, desc: 'Permanently increase MA by 1 (max +2).' },
+    { id: 'fbc_overclock_body', name: 'Overclock BODY +1', type: 'fbc', subType: 'overclock_body', cost: 5000, desc: 'Permanently increase BODY by 1 (max +2).' },
+    { id: 'fbc_ccpl', name: 'CCPL Retrofit', type: 'fbc', subType: 'ccpl', cost: 15000, desc: 'Cyber-Steroids: 3x BODY. Enables ACPA armor equip.' },
+    { id: 'fbc_quickmounts', name: 'Quick-Mounts', type: 'fbc', subType: 'quickmounts', cost: 8000, desc: 'Hot-swap weapons without Ripperdoc.' },
+    { id: 'fbc_hardened', name: 'Hardened Shielding', type: 'fbc', subType: 'hardened', cost: 12000, desc: 'Immunity to EMP/microwave weapons.' },
   ]
 };
 
@@ -96,6 +127,31 @@ export function ShopPanel({ onClose }) {
           return;
         }
         equipDeck(product.model, product.mu, product.speed, product.dataWalls);
+        break;
+      case 'hardware':
+        if (product.type === 'peripheral') {
+          const peripherals = useCyberdeckStore.getState().peripherals;
+          if (peripherals[product.subType]) {
+            sfx.error();
+            return;
+          }
+          useCyberdeckStore.getState().installPeripheral(product.subType);
+        } else if (product.subType === 'bodyweight') {
+          const hasBodyweight = useMeatspaceStore.getState().hasBodyweightSystem;
+          if (hasBodyweight) { sfx.error(); return; }
+          useMeatspaceStore.getState().purchaseBodyweightSystem();
+        } else if (product.subType === 'nutrient') {
+          const result = useMeatspaceStore.getState().buyNutrientPacks(1);
+          if (!result.success) { sfx.error(); return; }
+        }
+        break;
+      case 'safehouse':
+        if (product.subType === 'creche') {
+          const hasCreche = useMeatspaceStore.getState().hasDataCreche;
+          if (hasCreche) { sfx.error(); return; }
+          const result = useMeatspaceStore.getState().purchaseDataCreche();
+          if (!result.success) { sfx.error(); return; }
+        }
         break;
       case 'options':
         if (product.type === 'cellular') {
@@ -150,14 +206,64 @@ export function ShopPanel({ onClose }) {
           upgradeMu(product.amount);
         }
         break;
+      case 'fbc':
+        if (product.subType === 'chassis') {
+          const isFBC = useMeatspaceStore.getState().isFBC;
+          if (!isFBC) {
+            // First FBC purchase - convert to FBC
+            const result = useMeatspaceStore.getState().convertToFBC(product.id, product.cost);
+            if (!result.success) { sfx.error(); return; }
+            useTerminalStore.getState().addLog(`> ${result.message}`);
+          } else {
+            // Additional chassis purchase
+            const result = useMeatspaceStore.getState().purchaseChassis(product.id);
+            if (!result.success) { sfx.error(); return; }
+            useTerminalStore.getState().addLog(`> ${result.message}`);
+          }
+        }
+        break;
+      case 'fbc_upgrades':
+        const meatspace = useMeatspaceStore.getState();
+        if (!meatspace.isFBC) { sfx.error(); return; }
+        
+        if (product.subType === 'overclock_ref') {
+          const result = meatspace.upgradeFBCStat('ref', 1, product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        } else if (product.subType === 'overclock_ma') {
+          const result = meatspace.upgradeFBCStat('ma', 1, product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        } else if (product.subType === 'overclock_body') {
+          const result = meatspace.upgradeFBCStat('body', 1, product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        } else if (product.subType === 'ccpl') {
+          const result = meatspace.purchaseFBCUpgrade('ccpl', product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        } else if (product.subType === 'quickmounts') {
+          const result = meatspace.purchaseFBCUpgrade('quickMounts', product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        } else if (product.subType === 'hardened') {
+          const result = meatspace.purchaseFBCUpgrade('hardened', product.cost);
+          if (!result.success) { sfx.error(); return; }
+          useTerminalStore.getState().addLog(`> ${result.message}`);
+        }
+        break;
     }
   };
 
   const filters = [
     { id: 'programs', label: 'SOFTWARE' },
     { id: 'cyberdecks', label: 'CYBERDECKS' },
+    { id: 'hardware', label: 'HARDWARE' },
     { id: 'options', label: 'OPTIONS' },
-    { id: 'upgrades', label: 'UPGRADES' }
+    { id: 'upgrades', label: 'UPGRADES' },
+    { id: 'safehouse', label: 'SAFEHOUSE' },
+    { id: 'fbc', label: 'FBC CHASSIS' },
+    { id: 'fbc_upgrades', label: 'FBC UPGRADES' }
   ];
 
   const getTypeColor = (type) => {
@@ -175,7 +281,8 @@ export function ShopPanel({ onClose }) {
       'interface': 'text-orange-400',
       'scramble': 'text-pink-500',
       'speed': 'text-green-300',
-      'ripple': 'text-teal-400'
+      'ripple': 'text-teal-400',
+      'peripheral': 'text-amber-400'
     };
     return colors[type] || 'text-gray-400';
   };
@@ -211,6 +318,10 @@ export function ShopPanel({ onClose }) {
         {activeFilter === 'cyberdecks' && 'Cyberdeck Models - Base hardware for NET running'}
         {activeFilter === 'options' && 'Hardware Options - Per sourcebook rules'}
         {activeFilter === 'upgrades' && 'Deck Upgrades - Increase MU or combat bonus'}
+        {activeFilter === 'safehouse' && 'Safehouse Installations - Permanent base upgrades'}
+        {activeFilter === 'hardware' && 'Peripherals & Gear - Chipreaders, Bodyweight, etc.'}
+        {activeFilter === 'fbc' && 'Full Body Conversion Chassis - Replace flesh with machine (IRREVERSIBLE)'}
+        {activeFilter === 'fbc_upgrades' && 'FBC Upgrades - Overclock, CCPL, Quick-Mounts, Hardened Shielding'}
       </p>
 
       {/* PRODUCT GRID */}
@@ -218,17 +329,21 @@ export function ShopPanel({ onClose }) {
         {PRODUCTS[activeFilter].map(product => {
           const isAffordable = funds >= product.cost;
           const alreadyOwned = activeFilter === 'programs' && programs.some(p => p.id === product.id);
+          const hardwareOwned = activeFilter === 'hardware' && useCyberdeckStore.getState().peripherals[product.subType];
           const currentDeck = activeFilter === 'cyberdecks' && product.model === deckModel;
+          const bodyweightOwned = activeFilter === 'hardware' && product.subType === 'bodyweight' && useMeatspaceStore.getState().hasBodyweightSystem;
+          const crecheOwned = activeFilter === 'safehouse' && product.subType === 'creche' && useMeatspaceStore.getState().hasDataCreche;
           const isSelected = selectedProduct?.id === product.id;
+          const isOwned = alreadyOwned || hardwareOwned || currentDeck || bodyweightOwned || crecheOwned;
 
           return (
             <button
               key={product.id}
               onClick={() => { sfx.click(); setSelectedProduct(product); }}
-              disabled={!isAffordable || alreadyOwned || currentDeck}
+              disabled={!isAffordable || isOwned}
               className={`text-left p-3 border transition-colors
                 ${isSelected ? 'bg-neon-green/20 border-neon-green' : 'border-neon-green/30 hover:bg-neon-green/10'}
-                ${(!isAffordable || alreadyOwned || currentDeck) ? 'opacity-50 cursor-not-allowed' : ''}
+                ${(!isAffordable || isOwned) ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               <div className="font-bold text-sm sm:text-base mb-1 flex justify-between">
@@ -242,9 +357,9 @@ export function ShopPanel({ onClose }) {
                 {activeFilter === 'programs' && product.mu && ` | ${product.mu} MU`}
                 {product.strength && ` | STR: ${product.strength}`}
               </div>
-              {(alreadyOwned || currentDeck) && (
+              {isOwned && (
                 <div className="text-xs text-red-400 mt-1 font-bold">
-                  {alreadyOwned ? 'ALREADY OWNED' : 'CURRENT DECK'}
+                  {hardwareOwned || bodyweightOwned || crecheOwned ? 'INSTALLED' : alreadyOwned ? 'ALREADY OWNED' : currentDeck ? 'CURRENT DECK' : 'OWNED'}
                 </div>
               )}
             </button>

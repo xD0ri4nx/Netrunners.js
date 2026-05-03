@@ -281,3 +281,257 @@ Once the 10-Phase core roadmap is completed and the simulator mirrors the TTRPG 
 * **Specific Contacts:** Replace the generic "BBS Job Board" with a roster of distinct Fixer NPCs (e.g., a Corpo Rat, a Yakuza Boss, a Nomad Outcast).
 * **Information Brokering:** When the player extracts a "Grey File," they can choose who to sell it to. Selling Arasaka data to Militech pays well but increases Arasaka's active trace on the player.
 * **Loyalty Perks:** Building max loyalty with a specific Fixer unlocks unique safehouses, custom UI color schemes, or emergency bail-out funds if the player goes bankrupt.
+
+### Expansion 10: Soulkiller & Construct Ascension (The True Permadeath)
+* **The Ultimate Black ICE:** Introduce *Soulkiller*, the legendary, illegal Arasaka Black ICE. Instead of simply dealing Neural Damage, it attacks the player's fundamental consciousness.
+* **Digital Engrams:** If a player is flatlined by *Soulkiller*, their Meatspace body dies, but the save file isn't completely wiped. The player becomes a "Construct" (a digital ghost, like Alt Cunningham). 
+* **Ghost Gameplay Loop:** As a Construct, you lose access to the Safehouse, Meatspace stats, and Fixers. You live purely on the Net grid, having to hijack CPU nodes to store your code and steal processing power to survive, completely changing the game into a digital survival-horror experience.
+
+### Expansion 11: Netwatch Roaming Patrols (World Map Threat)
+* **Active World Map AI:** The World Map is no longer static. Elite Netwatch operatives (represented by moving icons) actively patrol the continental LDLs turn-by-turn.
+* **Grid Interdiction:** If your routing path crosses an LDL currently occupied by a Netwatch patrol, you are pulled into a forced, high-stakes "Interdiction Grid" combat encounter before you even reach your target Datafort. You must either flatline the cop or survive long enough to force an emergency trace-disconnect.
+
+### Expansion 12: Public Dataterms & "Street" Running
+* **The Cost of Living:** Safehouses require monthly Eurobuck upkeep. If the player goes bankrupt and gets evicted, they are forced onto the streets.
+* **Dataterm Jacking:** Without a Safehouse, the player must jack into the Net using public Night City Dataterms. These runs have strict, real-world time limits (before a beat cop notices you), heavily increased Trace generation, and force the use of slow, unencrypted public LDLs.
+
+### Expansion 13: Chromebook Deck Peripherals
+* **Hardware Add-ons:** Expand the Cyberdeck's modularity based on the *Chromebook* sourcebooks. Players can purchase and bolt on physical peripherals in Meatspace.
+* **Physical Chipreaders:** Allows the player to slot a one-time-use physical "Soft" (software) chip bought from the Black Market, essentially giving them a consumable free program slot that doesn't cost deck MU.
+* **Hardened Circuitry:** An expensive hardware upgrade that provides immunity to physical deck-destroying programs like *Firestarter*.
+* **Videoboards:** Allows the runner to maintain a visual link to their physical surroundings, slightly increasing Meatspace awareness (avoiding ambushes if playing the Edgerunner Crew Expansion).
+
+### Expansion 14: Weeflerunners & Trash Grids
+* **Script Kiddies:** Not every Datafort is a massive corporate monolith. Introduce "Trash Grids" run by "Weefles" (amateur Netrunners). 
+* **Unpredictable Danger:** These grids have low security and terrible loot, but they use homemade, wildly unstable ICE. Instead of predictable damage, Weefle ICE might accidentally crash the entire grid, randomly delete its own Code Gates, or backfire and deal damage to the Weefle Sysop.
+
+### Expansion 15: The Bartmoss Contingency (Dead Man's Switches & Cryo-Rigs)
+* **Cryogenic Support Rigs:** The ultimate late-game Safehouse upgrade modeled after Rache Bartmoss' legendary setup. Players can purchase illegal cryo-chambers, allowing the runner to remain jacked into the Net indefinitely without needing to disconnect for Meatspace rest or healing. However, this makes them uniquely vulnerable to physical power grid failures or real-world sabotage.
+* **Dead Man's Switches:** Hardware modifications that trigger catastrophic revenge events if the runner flatlines. A player can wire their deck to release a localized DataKrash-style virus, wipe a rival Fixer's debt ledger, or scramble the physical coordinates of their Safehouse to prevent a corporate meat-team from recovering their stash.
+* **Emergency Self Construct (ESC):** The absolute pinnacle of black-market survival software. If the player's physical body is killed (either by a Meatspace raid or lethal Black ICE), the ESC automatically triggers, ripping a digital engram of the player's consciousness and uploading it to a pre-selected Datafort. This saves the save file and instantly forces the player into the digital-only "Construct" gameplay loop (see Expansion 10).
+
+### Expansion 16: Meatspace Survival & Economy (The "Edgerunner Lifestyle" Engine)
+To faithfully recreate the *Cyberpunk 2020* lifestyle rules, the game loop must enforce strict monthly (in-game) financial drains and physiological upkeep. The AI agent must implement the following state variables and triggers:
+
+**16.1 Housing Tiers & Rent (Location-Based Safehouses)**
+The player must pay monthly rent. If rent is missed, they lose their Safehouse and are forced onto the streets, losing access to standard landlines and stash storage.
+* **Coffin/Cube (Combat Zone):** 150 eb/month. High risk of Safehouse being randomly burgled while the player is jacked into the Net. 
+* **Studio Apartment (Moderate Zone):** 200 eb/month. Standard security; the baseline Safehouse.
+* **Corporate Penthouse:** 1,000+ eb/month. Absolute security. Grants an automatic "Clean" landline (reduces base Trace risk).
+
+**16.2 Diet & Sustenance (The "Kibble" System)**
+The player has a biological Hunger meter that depletes every 24 in-game hours. Eating costs money, and the quality of food affects stat regeneration.
+* **Kibble (50 eb/month):** The cheapest option. Staves off starvation, but the player suffers a permanent -1 to their Meatspace EMP/Humanity stat due to the miserable living conditions.
+* **Generic Prepack (150 eb/month):** Standard microwavable synth-food. Keeps stats at baseline.
+* **Fresh Food (500 eb/month):** A luxury. Grants a temporary +1 bonus to the player's INT or REF for the next 24 hours due to high nutritional quality.
+* **Starvation Penalty:** If the player cannot afford food, their REF and INT stats temporarily drop by 1 point per day until they eat.
+
+**16.3 Telecom Bills & LDL Routing Costs**
+Jacking into the Net isn't free. The player is literally making phone calls to access the grid.
+* **Base Landline Service:** 100 eb/month. Failing to pay this immediately disables the Safehouse deck connection.
+* **Long Distance LDL Routing (Per-Minute Costs):** Bouncing a signal through international LDLs (Long Distance Links) costs money. Every "Turn" spent in a foreign Datafort ticks up the player's telecom bill. If a player does a massive 50-turn run through a Tokyo Arasaka fort from their Seattle Safehouse, they should receive a massive phone bill at the end of the month.
+* **Utility Fraud (Hacking the Bill):** Add a downtime option in the Safehouse allowing the player to roll their `System Knowledge` or `Programming` skill to spoof their phone line. Success waives the month's LDL routing fees; failure immediately alerts Netwatch.
+
+**16.4 Fatigue & Sleep Deprivation**
+Netrunning is mentally exhausting. 
+* **The Sleep Meter:** The player can safely operate for 16 in-game hours.
+* **Stimulants:** Players can purchase "Smash" or standard amphetamines to stay awake longer, resetting the sleep meter temporarily.
+* **Deprivation Penalty:** For every 2 hours spent awake past the 16-hour mark, the player suffers a cumulative -1 to their INT and REF stats. If INT drops to 0, the player automatically passes out, forcefully and unsafely jacking them out of the Net (which can trigger lethal Black ICE feedback).
+
+### Expansion 17: Prolonged Immersion Hardware (System Logic & State Overrides)
+To implement prolonged Netrunning hardware, the game state must introduce an "Immersion Mode" boolean that intercepts and overrides the standard biological decay timers (Hunger and Sleep) established in Expansion 16, replacing them with Hardware Capacity limits.
+
+**17.1 Bodyweight Life/Support System (Portable Implementation)**
+This item functions as a highly expensive, consumable-driven deck peripheral.
+* **Inventory & Upkeep:** The player must equip this item in a new "Peripheral" slot. Running the system requires purchasing consumable "Nutrient/Waste Packs" (e.g., 100 eb per run) from a Ripperdoc or Black Market. 
+* **State Override:** When jacked in, the player's Hunger and Sleep meters are frozen. Instead, a 72-hour `immersionTimer` begins ticking. 
+* **The "Crash" Penalty:** Disconnecting from the Net after being artificially sustained for more than 24 in-game hours triggers a massive "System Shock." The player's REF and BODY stats are temporarily halved for 12 in-game hours due to muscle stiffness and stimulant withdrawal, forcing them to rest safely before attempting another run.
+* **Lethal Threshold:** If the player ignores the 72-hour limit and stays jacked in, the IV bags run dry and toxicity builds up. The player takes immediate, unblockable Meatspace damage every hour until flatlining or forced disconnect.
+
+**17.2 Bodyweight™ Data Creche (Safehouse Installation)**
+This is not an inventory item; it is a permanent Safehouse upgrade and an entirely separate cyberdeck.
+* **Installation Requirements:** Cannot be installed in a Combat Zone Coffin. Requires a Studio Apartment tier or higher. Costs thousands of Eurobucks to purchase and install.
+* **Deck Stat Override:** When the player initiates a Net run from this specific Safehouse, the game completely ignores their currently equipped portable deck and instead uses the Creche's internal modem stats (`Speed: +1, MU: 12, Data Walls: +4`).
+* **The 96-Hour Limit:** Functions identically to the portable system but extends the safe immersion timer to a massive 96 hours, with a much smoother "Crash" penalty upon waking due to the integrated sleepmat and massage nodes.
+* **The Videoboard Mechanic (Meatspace Awareness):** Under normal rules, running from home leaves the player blind to the physical world. Because the Creche has a 1'x1' videoboard, if an external threat (e.g., a burglar, an eviction squad, or a traced Netwatch hit-team) breaches the Safehouse, the player receives a priority UI alert *inside* the Net. This grants them exactly 1 safe turn to execute a clean Jack-Out before their meat body is attacked.
+
+**17.3 Cyberpsychosis & Empathy Drain**
+Spending 90 hours inside a digital construct without touching the real world strips away a runner's humanity.
+* **The Ghost Atrophy:** For every continuous 24-hour block spent in Immersion Mode, the player permanently loses 0.1 EMP (Empathy/Humanity). Pushing these limits frequently will slowly drive the runner into Cyberpsychosis, eventually causing the game-over state reserved for machines and Rache Bartmoss wannabes.
+
+### Expansion 18: Cyborg Ascension (Full Body Conversions)
+Players who accumulate massive wealth can discard their fragile Meatspace bodies entirely. The player's brain and spinal cord are surgically removed and placed into a "Biopod," which can be slotted into various specialized robotic chassis.
+
+**The Biopod Mechanic:**
+* Once converted, the player's biological humanity drops to near zero. 
+* Players no longer use standard Neural HP for physical damage; they use **SDP (Structural Damage Points)**. FBCs do not "heal"—they must be repaired by spending Eurobucks at a Techie.
+* A player can own multiple chassis and swap their Biopod into a different body at their Safehouse depending on the mission requirements.
+
+**Chromebook 2 FBC Chassis Roster:**
+* **Gemini:** The human-passing chassis. Covered in synthetic RealSkinn and hair, it allows the player to bypass security checkpoints. (Note: Base model has no inherent armor unless Subdermal Armor is purchased).
+    * *Base Stats:* REF 10, MA 10, BODY 12, SP 0. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 55,000 eb.
+* **Alpha Class:** The standard combat/solo conversion. Sleek, metallic, fast, and heavily armored. 
+    * *Base Stats:* REF 10, MA 10, BODY 12, SP 25. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 58,000 eb.
+* **Wingman:** The aerospace pilot chassis. Immune to high G-forces and comes with direct neural-link jacks. 
+    * *Base Stats:* REF 15, MA 10, BODY 12, SP 25. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 54,000 eb.
+* **Eclipse:** The espionage chassis. Coated in radar-absorbent materials and silent joints. 
+    * *Base Stats:* REF 10, MA 12, BODY 10, SP 15. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 76,000 eb.
+* **Aquarius:** The deep-sea operations FBC. Equipped with sonar and extreme pressure resistance. 
+    * *Base Stats:* REF 8, MA 10 (Swim 15), BODY 12, SP 15. 
+    * *SDP:* Limbs 20/30, Torso 40/50. 
+    * *Cost:* 65,000 eb.
+* **Fireman (Brimstone):** The hazard/rescue conversion. Immune to extreme heat and toxic environments. 
+    * *Base Stats:* REF 8, MA 10, BODY 14, SP 20. 
+    * *SDP:* Limbs 30/40, Torso 40/50. 
+    * *Cost:* 60,000 eb.
+* **Samson (Worker):** The heavy industrial labor chassis. Extremely slow, but possesses massive lifting capacity.
+    * *Base Stats:* REF 6, MA 8, BODY 18, SP 15. 
+    * *SDP:* Limbs 40/50, Torso 50/60. 
+    * *Cost:* 40,000 eb.
+
+**Chromebook 3 FBC Chassis Roster:**
+* **Wiseman (Cyberspace Commando):** The ultimate Netrunner chassis. Stripped down for pure digital speed. Packed with extra internal MU and hardened circuitry immune to *Firestarter* ICE.
+    * *Base Stats:* REF 10, MA 10, BODY 12, SP 15. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 90,000 eb.
+* **Dragoon:** The maximum combat borg. A highly illegal, walking military tank allowing the player to mount heavy vehicular weapons directly to their arms.
+    * *Base Stats:* REF 15, MA 25, BODY 20, SP 40. 
+    * *SDP:* Limbs 40/50, Torso 50/60. 
+    * *Cost:* 120,000 eb.
+* **Spyder:** A multi-limbed climbing/maintenance chassis. Features extra arms and wall-crawling capability. 
+    * *Base Stats:* REF 12, MA 20, BODY 12, SP 30. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 118,110 eb.
+
+**Deep Space FBC Chassis Roster:**
+* **Copernicus (Space-Use):** Manufactured by Cybermatrix, this is the ideal chassis for deep-space exploration and orbital operations. It comes fully shielded against radiation, EMP, and microwaves. 
+    * *Base Stats:* REF 11, MA 10, BODY 12, SP 25. 
+    * *SDP:* Limbs 20/30, Torso 30/40. 
+    * *Cost:* 60,000 eb.
+* **Burroughs (Mars Operations):** Manufactured by Adrek Robotics, this chassis is heavily reinforced to withstand the scouring sandstorms of the Martian surface. It is outfitted with extreme temperature controls and radiation shielding.
+    * *Base Stats:* REF 10, MA 10, BODY 12, SP 30. 
+    * *SDP:* Limbs 30/40, Torso 40/50. 
+    * *Cost:* 65,000 eb.
+
+**FBC Upgrades & Customization Options:**
+* **Stat Overclocking:** Players can spend Eurobucks to permanently increase the REF (Reflexes), MA (Movement), and BODY stats of their specific chassis up to its mechanical cap.
+* **CCPL Retrofit (Cyber-Steroids):** A high-end upgrade from *Chromebook 3*. It temporarily multiplies the FBC's BODY stat by 3, allowing the borg to physically equip and wear ACPA (Powered Combat Armor) over their chassis for apocalyptic levels of defense.
+* **Interchangeable Quick-Mounts:** Allows the player to hot-swap physical arms/weapons on their chassis without visiting a Ripperdoc. 
+* **Hardened Shielding:** Expensive localized shielding that protects the chassis from Meatspace EMP grenades or microwave weapons that would normally shut down an FBC.
+
+### Expansion 19: Custom Software Compilation (Programming 101)
+Players no longer need to rely strictly on the Afterlife BBS to buy software; they can compile homegrown programs from scratch in their Safehouse.
+
+**The Compilation Formula:**
+* **Difficulty Calculation:** Every program is built from three elements: Functions, Options, and Strength. The total Difficulty to write the program is the sum of the Difficulty costs for all Options, plus the Function cost, plus the Strength level.
+* **The Skill Check:** To successfully write the program, the player must roll their INT + Programming Skill + 1D10 and get a value equal to or greater than the Difficulty number.
+* **Pooling:** If the Difficulty is too high, the player can hire/team up with an NPC Netrunner to pool their respective INT and Skills together, rolling a single D10 for the combined total.
+
+**Time, Cost, and Storage Space:**
+* **Writing Times:** Every point of program Difficulty takes 6 in-game hours to write.
+* **Market Value:** If selling custom code (or calculating base worth), the cost is the Difficulty multiplied by 10eb. This is then modified by the program type (e.g., Intrusion/Utilities are 1x cost, Anti-Program is 4x cost, Anti-Personnel is 25x cost).
+* **Program Size (MU):** Difficulty directly determines the Memory Unit size. A Diff of 10-15 takes 1 MU, scaling up to Diff 41+ taking 7 MU.
+* **Code Optimization:** Players can apply this specific Option to cut the program's final MU size in half (rounded up), but it increases the Difficulty of the program by +10.
+
+**Demons and Daemons:**
+* **Demonology:** Demons use a Compiler function to pack several other programs together. The subprograms take up half the memory space (Add all Difficulty numbers together, divide by 2, and add to the Demon's difficulty).
+* **Demon Drawbacks:** The Demon's Strength is reduced by 1 for each program "on board," and if the Demon is destroyed, all linked programs go down with it.
+* **Independent Daemons:** Constructed like a Demon but specifically require the Recognition, Movement, and Pseudointellect options. They can be equipped with the **Disguise** function (Difficulty 10) to fool defensive programs, or the **Doppleganger** function (Difficulty 20) to absorb the functions of a program it just destroyed.
+
+**Data Chips & Piracy:**
+* **Storage:** Programs are stored on physical data chips, holding 1 MU each. Standard copying costs 10.00 eb per chip.
+* **Copy Protection:** Anti-Program and Anti-Personnel programs have special copy-protection routines that erase the chip during a backup attempt. Players must beat a Task Difficulty of 28 using their Programming Skill to break the protection and successfully pirate the software.
+
+### Expansion 20: Controller Node Interface Logic
+When a player interacts with a Controller Node (`O`) on the grid, the game phase transitions to a modal interrupt. Executing any option requires a specific program type to be currently loaded in the player's `activeAction` or `activePassives` state within the `cyberdeckStore`. 
+
+* **[ DISABLE CAMERAS ] (Utility):** 
+    * *Prerequisite:* Requires a Utility program (e.g., *Decrypt*).
+    * *Logic:* Updates the grid combat state to apply a permanent `-3` penalty to the "ICE Defense/Detection" math calculation for all enemy entities for the remainder of the run.
+* **[ OPEN BLAST DOORS ] (Intrusion):** 
+    * *Prerequisite:* Requires an Intrusion program (e.g., *Hammer*, *Drill*).
+    * *Logic:* Directly mutates the 2D grid array in `TheNet.jsx`, locating and converting 5 Wall entities (`#`) into empty path tiles, opening shortcuts to the CPU/Memory nodes.
+* **[ HIJACK TURRETS ] (Anti-System):** 
+    * *Prerequisite:* Requires an Anti-System program (e.g., *Krash*).
+    * *Logic:* Spawns allied stationary Turret entities (e.g., `T`) on the grid. During the player's turn, these entities automatically roll attacks against any Black ICE within their line of sight/radius.
+* **Execution & Cleanup:** Successfully executing any of these three actions consumes the Controller Node (converting the `O` tile to an empty space) and returns the XState router back to the standard `net` combat phase.
+
+
+### Phase 21: System Initialization (Character Creation Engine)
+When the player starts a new game, the system halts the simulation and presents the Character Generation screen. This establishes the baseline `playerState` and acts as the game's difficulty selector.
+
+**0.1 The Handle & Identity**
+* **Handle:** The player inputs their street name (String). This is used by NPCs, Fixers, and Sysop logs throughout the game.
+
+Before assigning stats, the player selects their "Genetic Baseline" (Power Level), which dictates how many Character Points they can distribute across their 9 primary attributes. The minimum score for any attribute is 2; the maximum is 10.
+
+* **50 Points (Minor Hero):** A gritty, below-average street runner. Forces extreme stat specialization and relies heavily on luck and gear.
+* **60 Points (Major Supporting Character):** The standard, reliable Night City professional.
+* **70 Points (Major Hero):** A highly capable, veteran Edgerunner. (The TTRPG Standard).
+* **75 Points (Legendary):** The absolute genetic elite; the top 1% of the street.
+
+* **INT (Intelligence):** Critical. Determines software programming success, System Knowledge checks, and tracing evasion.
+* **REF (Reflexes):** Critical. Determines Initiative on the Net and real-world combat evasion.
+* **TECH (Technical Ability):** Determines physical deck repair and hardware modification.
+* **COOL (Cool/Willpower):** Determines resistance to interrogation and stress/suppression in physical combat.
+* **ATTR (Attractiveness):** Affects real-world interactions and Fixer negotiations.
+* **LUCK:** A pool of points the player can expend during a run to boost critical die rolls. Refreshes each session/run.
+* **MA (Movement Allowance):** Determines Meatspace movement speed.
+* **BODY (Body Type):** Determines physical hit points (SDP/HP) and carrying capacity.
+* **EMP (Empathy):** Starting humanity. Governs how much cyberware the player can install before risking cyberpsychosis.
+
+**0.3 The Netrunner Skill Package**
+The player defaults to the Netrunner Role. They receive **40 Skill Points** to distribute exclusively among their Career Package. No starting skill can exceed 10.
+* **Interface (Special Ability):** The absolute most important skill. Added to INT to determine deck operation success.
+* **Awareness/Notice:** Spotting physical threats while jacked in.
+* **Basic Tech:** General electronic troubleshooting.
+* **Education:** General knowledge and trivia.
+* **System Knowledge:** Understanding Corporate network topologies and identifying ICE variants.
+* **CyberTech:** Maintaining neural plugs and interface cyberware.
+* **Cyberdeck Design:** Required for optimizing and physically upgrading deck hardware.
+* **Composition:** For writing fake logs and social engineering.
+* **Electronics:** Hardwiring physical Controller Nodes.
+* **Programming:** Writing custom software and Daemons (Used in Expansion 19).
+
+**0.4 Background & Starting Gear (The Difficulty Slider)**
+*Developer Note: This overrides the standard CP2020 rules which dictate starting cash via the Interface skill level, acting as a structured video game difficulty selector.*
+
+The player selects a Background Tier from 1 to 5. This permanently sets their starting `wealthTier` in the state engine, dictating their starting Eurobucks, Cyberdeck, and Safehouse.
+
+* **Tier 1: Street Rat (Extreme Difficulty)**
+    * *Wealth Tier Value:* 1
+    * *Starting Funds:* 500 eb.
+    * *Housing:* Homeless (Requires public Dataterms to jack in, extreme physical risk).
+    * *Gear:* Fuchi Cyber-6 (Speed -1, MU 10, Data Walls +4). Bare-bones deck. Comes with *Decrypt* and a basic *Sword* program. 
+
+* **Tier 2: Combat Zone Scrapper (Hard Difficulty)**
+    * *Wealth Tier Value:* 2
+    * *Starting Funds:* 1,500 eb.
+    * *Housing:* Coffin/Cube (150 eb/month rent due immediately).
+    * *Gear:* Standard Cybermodem (Speed 0, MU 10). Comes with *Decrypt*, *Sword*, and *Shield*. 
+
+* **Tier 3: Established Edgerunner (Normal Difficulty)**
+    * *Wealth Tier Value:* 3
+    * *Starting Funds:* 3,000 eb.
+    * *Housing:* Studio Apartment (200 eb/month).
+    * *Gear:* Zetatech Paraline 5750 (Speed +1, MU 10, Data Walls +4). Good array of basic utilities, *Armor*, and standard Anti-Program ICE.
+
+* **Tier 4: Corporate Asset (Easy Difficulty)**
+    * *Wealth Tier Value:* 4
+    * *Starting Funds:* 7,000 eb.
+    * *Housing:* High-End Apartment (500 eb/month, secure landline).
+    * *Gear:* EBM P.C. 2020 (Speed +1, MU 15, Data Walls +2). Includes advanced stealth software (*Invisibility*) and Anti-Personnel programs (*Brainwipe*).
+
+* **Tier 5: Trust-Fund Elite (Very Easy / Sandbox)**
+    * *Wealth Tier Value:* 5
+    * *Starting Funds:* 15,000 eb.
+    * *Housing:* Corporate Penthouse (1,000 eb/month, absolute physical security, Trace evasion bonuses).
+    * *Gear:* Raven Microcybernetics Deck (Speed +2, MU 15). Pre-loaded with custom Daemons, a full suite of Black ICE counters, and enough raw funds to immediately purchase body modifications or an FBC chassis.

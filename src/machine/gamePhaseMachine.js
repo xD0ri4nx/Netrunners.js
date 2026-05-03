@@ -40,6 +40,13 @@ export const gamePhaseMachine = setup({}).createMachine({
         LOSE_TO_RIVAL: { target: 'safehouse' }
       }
     },
+    netwatch_interdiction: {
+      on: {
+        INTERDICTION_WIN: { target: 'jacking_in' },
+        INTERDICTION_ESCAPE: { target: 'safehouse' },
+        INTERDICTION_TIMEOUT: { target: 'safehouse' }
+      }
+    },
     jacking_in: {
       on: { CONNECTION_ESTABLISHED: { target: 'net' } }
     },

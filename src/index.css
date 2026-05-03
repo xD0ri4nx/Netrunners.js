@@ -8,6 +8,24 @@
   .text-shadow-glow {
     text-shadow: 0 0 5px var(--color-neon-green);
   }
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Prevent text selection highlighting on interactive elements */
+button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent blue text selection highlight on buttons */
+button {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Prevents scrolling and sets the pitch-black void */
@@ -40,4 +58,13 @@ body, html {
   0% { opacity: 0.95; }
   50% { opacity: 1; }
   100% { opacity: 0.98; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-dropdown {
+  animation: slideDown 0.2s ease-out forwards;
 }

@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useMeatspaceStore } from './meatspaceStore';
 
 export const useCyberdeckStore = create(
     persist(
-        (set) => ({
+        (set, get) => ({
     deckModel: 'Zetatech Paraline',
     deckType: 'traditional',
     maxMu: 5,
@@ -22,9 +23,19 @@ export const useCyberdeckStore = create(
       psychosisRisk: 0
     },
 
+    peripherals: {
+      chipreader: false,
+      hardened: false,
+      videoboard: false,
+      optical: false
+    },
+
+    chipSlot: null,
+    chipProgram: null,
+
     programs: [
-        { id: 'prog_decrypt', name: 'Decrypt v1.0', type: 'utility', strength: 4 },
-        { id: 'prog_sword', name: 'Sword', type: 'anti-ice', strength: 4 }
+        { id: 'prog_decrypt', name: 'Decrypt v1.0', type: 'utility', strength: 4, difficulty: 14, muCost: 1, marketValue: 140, isCustom: false },
+        { id: 'prog_sword', name: 'Sword', type: 'anti-ice', strength: 4, difficulty: 14, muCost: 1, marketValue: 350, isCustom: false }
     ],
 
     activeAction: null,
@@ -51,14 +62,37 @@ export const useCyberdeckStore = create(
     }),
 
     addProgram: (program) => set((state) => {
-        if (state.usedMu < state.maxMu) {
+        const muCost = program.muCost || 1;
+        if (state.usedMu + muCost <= state.maxMu) {
             return {
                 programs: [...state.programs, program],
-                usedMu: state.usedMu + 1
+                usedMu: state.usedMu + muCost
             };
         }
         return state;
     }),
+
+    removeProgram: (programId) => set((state) => {
+        const program = state.programs.find(p => p.id === programId);
+        if (!program) return state;
+        const muCost = program.muCost || 1;
+        return {
+            programs: state.programs.filter(p => p.id !== programId),
+            usedMu: Math.max(0, state.usedMu - muCost),
+            activeAction: state.activeAction?.id === programId ? null : state.activeAction,
+            activePassives: state.activePassives.filter(p => p.id !== programId)
+        };
+    }),
+
+    getProgramMuCost: (difficulty) => {
+        if (difficulty <= 15) return 1;
+        if (difficulty <= 20) return 2;
+        if (difficulty <= 25) return 3;
+        if (difficulty <= 30) return 4;
+        if (difficulty <= 35) return 5;
+        if (difficulty <= 40) return 6;
+        return 7;
+    },
 
     upgradeMu: (amount) => set((state) => ({
         maxMu: state.maxMu + amount
@@ -128,11 +162,56 @@ export const useCyberdeckStore = create(
 
     reduceMaxMu: (amount) => set((state) => ({
         maxMu: Math.max(1, state.maxMu - amount)
-    }))
+    })),
+
+    installPeripheral: (type) => set((state) => ({
+        peripherals: { ...state.peripherals, [type]: true }
+    })),
+
+    removePeripheral: (type) => set((state) => ({
+        peripherals: { ...state.peripherals, [type]: false }
+    })),
+
+    equipChip: (program) => set({ chipProgram: program }),
+
+    consumeChip: () => set({ chipProgram: null }),
+
+    hasPeripheral: (type) => {
+        const state = get();
+        return state.peripherals[type] || false;
+    },
+
+getEffectiveAction: () => {
+        const state = get();
+        return state.chipProgram || state.activeAction;
+      },
+
+    getEffectiveDeckStats: () => {
+        const state = get();
+        const meatspaceState = useMeatspaceStore.getState();
+        
+        if (meatspaceState.crecheInstalled) {
+            return {
+                speed: state.speed + 1,
+                maxMu: 12,
+                dataWalls: state.dataWalls + 4,
+                deckModel: 'Data Creche',
+                deckType: 'creche'
+            };
+        }
+        
+        return {
+            speed: state.speed,
+            maxMu: state.maxMu,
+            dataWalls: state.dataWalls,
+            deckModel: state.deckModel,
+            deckType: state.deckType
+        };
+      }
         }),
         {
             name: 'cyberdeck-storage',
-            version: 2,
+            version: 3,
             migrate: (persistedState, version) => {
                 if (version === 0 || version === 1) {
                     return {
@@ -143,7 +222,28 @@ export const useCyberdeckStore = create(
                             chipwareSocket: false,
                             brainWall: false,
                             psychosisRisk: 0
-                        }
+                        },
+                        peripherals: {
+                            chipreader: false,
+                            hardened: false,
+                            videoboard: false,
+                            optical: false
+                        },
+                        chipSlot: null,
+                        chipProgram: null
+                    };
+                }
+                if (version === 2) {
+                    return {
+                        ...persistedState,
+                        peripherals: {
+                            chipreader: false,
+                            hardened: false,
+                            videoboard: false,
+                            optical: false
+                        },
+                        chipSlot: null,
+                        chipProgram: null
                     };
                 }
                 return persistedState;

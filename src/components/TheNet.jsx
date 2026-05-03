@@ -248,6 +248,14 @@ export function TheNet({ onJackOut }) {
       addLog(`> HEIST CONTRACT ACTIVE: ${missionStore.activeJob.turnLimit} TURNS REMAINING.`);
     }
     generateFort(false);
+    
+    // Phase 17: Auto-start immersion if bodyweight system available
+    const meatspaceStore = useMeatspaceStore.getState();
+    if (meatspaceStore.hasBodyweightSystem && meatspaceStore.nutrientPacks > 0) {
+      const result = meatspaceStore.startImmersion();
+      const addLog = useTerminalStore.getState().addLog;
+      addLog(`> ${result.message}`);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -359,6 +367,44 @@ export function TheNet({ onJackOut }) {
 
       const iceStr = ice.name === 'Pit Bull' ? 3 : ice.name === 'Bloodhound' ? 4 : 5;
 
+      // WEEFLERUNNER UNSTABLE ICE MECHANIC
+      const currentLdlId = useRoutingStore.getState().currentLdl;
+      const targetLdl = currentLdlId ? LDL_DATABASE[currentLdlId] : null;
+      if (targetLdl?.isWeefle && !ice.isAlly) {
+        const unstableRoll = Math.floor(Math.random() * 100) + 1;
+        if (unstableRoll <= 20) {
+          const malfunctionType = Math.floor(Math.random() * 3) + 1;
+          if (malfunctionType === 1) {
+            const selfDamage = Math.floor(Math.random() * 6) + 1;
+            const newIceStr = iceStr - selfDamage;
+            addLog(`> ⚠ ${ice.name.toUpperCase()} MALFUNCTION! SELF-DAMAGE: -${selfDamage} STR.`);
+            if (newIceStr <= 0) {
+              addLog(`> ⚠ ${ice.name.toUpperCase()} CRASHED INTO ITS OWN CODE! DEREZZED.`);
+              world.remove(ice);
+              return;
+            }
+            ice.name = newIceStr >= 4 ? 'Hellhound' : newIceStr >= 3 ? 'Pit Bull' : 'Bloodhound';
+            ice.render.char = ice.name === 'Pit Bull' ? 'P' : ice.name === 'Hellhound' ? 'H' : 'B';
+            return;
+          } else if (malfunctionType === 2) {
+            const gateEntities = world.with('isCodeGate').entities;
+            if (gateEntities.length > 0) {
+              const randomGate = gateEntities[Math.floor(Math.random() * gateEntities.length)];
+              addLog(`> ⚠ ${ice.name.toUpperCase()} GLITCHED! CODE GATE DEACTIVATED.`);
+              world.remove(randomGate);
+              return;
+            }
+          } else {
+            const targetOptions = [player, ...iceEntities.filter(e => e !== ice)];
+            const wrongTarget = targetOptions[Math.floor(Math.random() * targetOptions.length)];
+            addLog(`> ⚠ ${ice.name.toUpperCase()} CONFUSED! ATTACKING WRONG TARGET.`);
+            if (wrongTarget === player) {
+              return;
+            }
+          }
+        }
+      }
+
       if (stealthProg) {
         const playerHideRoll = Math.floor(Math.random() * 10) + 1;
         const iceDetectRoll = Math.floor(Math.random() * 10) + 1;
@@ -451,15 +497,25 @@ export function TheNet({ onJackOut }) {
           if (finalDamage > 0) {
             setDamageTaken(true);
           }
-          addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${ice.name.toUpperCase()}!`);
-          takeNeuralDamage(finalDamage);
+          addLog(`> CRITICAL: YOU TOOK ${finalDamage} ${useMeatspaceStore.getState().isFBC ? 'SDP DAMAGE' : 'NEURAL DAMAGE'} FROM ${ice.name.toUpperCase()}!`);
+          if (useMeatspaceStore.getState().isFBC) {
+            useMeatspaceStore.getState().takePhysicalDamage(finalDamage);
+          } else {
+            takeNeuralDamage(finalDamage);
+          }
           sfx.damage();
 
           if (ice.name === 'Firestarter') {
-            const deckDamage = Math.floor(Math.random() * 15) + 10;
-            useCyberdeckStore.getState().damageDeck(deckDamage);
-            addLog(`> FIRESTARTER CORRUPTED YOUR DECK FIRMWARE! DECK INTEGRITY -${deckDamage}%.`);
-            sfx.error();
+            const hasHardened = useCyberdeckStore.getState().peripherals.hardened;
+            const isWiseman = useMeatspaceStore.getState().currentChassis === 'fbc_wiseman';
+            if (hasHardened || isWiseman) {
+              addLog(isWiseman ? `> WISEMAN CHASSIS DETECTED. FIRESTARTER IMMUNE.` : `> HARDENED CIRCUITRY DETECTED. DECK FIRMWARE IMMUNE TO FIRESTARTER CORRUPTION.`);
+            } else {
+              const deckDamage = Math.floor(Math.random() * 15) + 10;
+              useCyberdeckStore.getState().damageDeck(deckDamage);
+              addLog(`> FIRESTARTER CORRUPTED YOUR DECK FIRMWARE! DECK INTEGRITY -${deckDamage}%.`);
+              sfx.error();
+            }
           }
 
           if (ice.name === 'Bloodhound') {
@@ -483,8 +539,12 @@ export function TheNet({ onJackOut }) {
             }
           }
 
-          if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
-            addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
+          const meatspaceState = useMeatspaceStore.getState();
+          const isFBC = meatspaceState.isFBC;
+          const totalSdp = isFBC ? Object.values(meatspaceState.sdp).reduce((a, b) => a + b, 0) : 999;
+          
+          if ((!isFBC && meatspaceState.getCurrentInt() <= 2) || (isFBC && totalSdp <= 0)) {
+            addLog(isFBC ? `> FBC DESTROYED. BIOPOD CORRUPTED. SYSTEM FAILURE.` : `> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
             sfx.flatline();
             awardIp();
             setTimeout(() => onJackOut(), 1500);
@@ -758,12 +818,18 @@ export function TheNet({ onJackOut }) {
             if (finalDamage > 0) {
               setDamageTaken(true);
             }
-            addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${sysop.name.toUpperCase()}!`);
-            takeNeuralDamage(finalDamage);
+            addLog(`> CRITICAL: YOU TOOK ${finalDamage} ${useMeatspaceStore.getState().isFBC ? 'SDP DAMAGE' : 'NEURAL DAMAGE'} FROM ${sysop.name.toUpperCase()}!`);
+            if (useMeatspaceStore.getState().isFBC) {
+              useMeatspaceStore.getState().takePhysicalDamage(finalDamage);
+            } else {
+              takeNeuralDamage(finalDamage);
+            }
             sfx.damage();
 
-            if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
-              addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
+            const msState = useMeatspaceStore.getState();
+            const fbcTotalSdp = msState.isFBC ? Object.values(msState.sdp).reduce((a, b) => a + b, 0) : 999;
+            if ((!msState.isFBC && msState.getCurrentInt() <= 2) || (msState.isFBC && fbcTotalSdp <= 0)) {
+              addLog(msState.isFBC ? `> FBC DESTROYED. BIOPOD CORRUPTED.` : `> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
               sfx.flatline();
               awardIp();
               setTimeout(() => onJackOut(), 1500);
@@ -895,12 +961,18 @@ export function TheNet({ onJackOut }) {
                 addLog(`> FLAK INTERFERENCE REDUCED SYSOP DAMAGE: -1.`);
               }
 
-              addLog(`> CRITICAL: YOU TOOK ${finalDamage} NEURAL DAMAGE FROM ${sysop.name.toUpperCase()}!`);
-              takeNeuralDamage(finalDamage);
+              addLog(`> CRITICAL: YOU TOOK ${finalDamage} ${useMeatspaceStore.getState().isFBC ? 'SDP DAMAGE' : 'NEURAL DAMAGE'} FROM ${sysop.name.toUpperCase()}!`);
+              if (useMeatspaceStore.getState().isFBC) {
+                useMeatspaceStore.getState().takePhysicalDamage(finalDamage);
+              } else {
+                takeNeuralDamage(finalDamage);
+              }
               sfx.damage();
 
-              if (useMeatspaceStore.getState().getCurrentInt() <= 2) {
-                addLog(`> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
+              const ms2 = useMeatspaceStore.getState();
+              const fbc2Sdp = ms2.isFBC ? Object.values(ms2.sdp).reduce((a, b) => a + b, 0) : 999;
+              if ((!ms2.isFBC && ms2.getCurrentInt() <= 2) || (ms2.isFBC && fbc2Sdp <= 0)) {
+                addLog(ms2.isFBC ? `> FBC DESTROYED. BIOPOD CORRUPTED.` : `> FLATLINE DETECTED. EMERGENCY CORTICAL DISCONNECT TRIGGERED.`);
                 sfx.flatline();
                 awardIp();
                 setTimeout(() => onJackOut(), 1500);
@@ -1245,11 +1317,17 @@ export function TheNet({ onJackOut }) {
         const iceStr = hitIce.name === 'Pit Bull' ? 3 : hitIce.name === 'Bloodhound' ? 4 : 5;
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
+        const { peripherals } = useCyberdeckStore.getState();
+        const videoboardBonus = peripherals.videoboard ? 1 : 0;
+        const opticalBonus = peripherals.optical ? 2 : 0;
 
-        const evasionTotal = playerRoll + int + interfaceLvl + stealthProg.strength + interfaceBonus;
+        const evasionTotal = playerRoll + int + interfaceLvl + stealthProg.strength + interfaceBonus + videoboardBonus + opticalBonus;
         const detectionTotal = iceRoll + iceStr;
 
-        addLog(`> EVASION: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${stealthProg.strength}) + DECK(+0) = ${evasionTotal}`);
+        const bonusStr = videoboardBonus > 0 || opticalBonus > 0 
+          ? ` + HARDWARE(${videoboardBonus + opticalBonus})` 
+          : '';
+        addLog(`> EVASION: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${stealthProg.strength}) + DECK(+0)${bonusStr} = ${evasionTotal}`);
         addLog(`> ICE DETECTION: D10(${iceRoll}) + STR(${iceStr}) = ${detectionTotal}`);
 
         if (evasionTotal > detectionTotal) {
@@ -1269,7 +1347,15 @@ export function TheNet({ onJackOut }) {
       }
       // 2. If Stealth is OFF, bumping ICE requires an equipped Action program to attack.
       else if (activeAction && activeAction.type === 'anti-ice') {
-        addLog(`> INITIATING COMBAT SEQUENCE WITH ${activeAction.name.toUpperCase()}...`);
+        const { getEffectiveAction } = useCyberdeckStore.getState();
+        const effectiveAction = getEffectiveAction();
+        const combatProg = effectiveAction || activeAction;
+        const isChipUsed = effectiveAction && effectiveAction.id !== activeAction?.id;
+        
+        addLog(`> INITIATING COMBAT SEQUENCE WITH ${combatProg.name.toUpperCase()}...`);
+        if (isChipUsed) {
+          addLog(`> CHIP PROGRAM LOADED: ${combatProg.name.toUpperCase()}`);
+        }
 
         const playerRoll = Math.floor(Math.random() * 10) + 1;
         const iceRoll = Math.floor(Math.random() * 10) + 1;
@@ -1277,16 +1363,22 @@ export function TheNet({ onJackOut }) {
 
         const { int, interfaceLvl } = useMeatspaceStore.getState();
 
-        const attackTotal = playerRoll + int + interfaceLvl + activeAction.strength + interfaceBonus;
+        const attackTotal = playerRoll + int + interfaceLvl + combatProg.strength + interfaceBonus;
         const defenseTotal = iceRoll + iceStr;
 
-        addLog(`> ${activeAction.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
+        addLog(`> ${combatProg.name.toUpperCase()}: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${combatProg.strength}) + DECK(+0)${interfaceBonus !== 0 ? ` + IFACE(${interfaceBonus})` : ''} = ${attackTotal}`);
         addLog(`> TARGET DEFENSE: D10(${iceRoll}) + STR(${iceStr}) = ${defenseTotal}`);
 
         if (attackTotal > defenseTotal) {
           sfx.attack();
 
-          if (activeAction.id === 'prog_brainwipe') {
+          // Consume chip program after successful attack
+          if (isChipUsed) {
+            useCyberdeckStore.getState().consumeChip();
+            addLog("> CHIP PROGRAM CONSUMED.");
+          }
+
+          if (combatProg.id === 'prog_brainwipe') {
             const strReduction = Math.floor(Math.random() * 6) + 1;
             const newIceStr = iceStr - strReduction;
 
@@ -1299,7 +1391,7 @@ export function TheNet({ onJackOut }) {
               hitIce.render.char = hitIce.name === 'Pit Bull' ? 'P' : hitIce.name === 'Hellhound' ? 'H' : 'B';
               addLog(`> BRAINWIPE DEPLOYED. ICE COGNITION DEGRADED BY ${strReduction} STR. NOW STR:${newIceStr}.`);
             }
-          } else if (activeAction.id === 'prog_liche') {
+          } else if (combatProg.id === 'prog_liche') {
             hitIce.isAlly = true;
             hitIce.render.color = 'text-cyan-400';
             addLog("> LICHE DEPLOYED. ICE REPROGRAMMED. HOSTILE ENTITY NOW ALLIED.");
@@ -1408,6 +1500,38 @@ export function TheNet({ onJackOut }) {
           sfx.flatline();
           addLog('> HEIST CONTRACT FAILED. STRIKE TEAM EXTRACTED UNDER FIRE.');
           missionStore.failPayload();
+        }
+      }
+
+      // Phase 17: Process immersion timer
+      const meatspaceStore = useMeatspaceStore.getState();
+      if (meatspaceStore.isImmersionMode) {
+        meatspaceStore.processTurnImmersion();
+        const updatedMeatspace = useMeatspaceStore.getState();
+        const addLog = useTerminalStore.getState().addLog;
+        const maxImmersion = updatedMeatspace.hasDataCreche ? 96 : 72;
+        const hoursLeft = maxImmersion - updatedMeatspace.immersionTimer;
+        
+        if (hoursLeft <= 12 && hoursLeft > 0) {
+          addLog(`> WARNING: IMMERSION LIMIT ${hoursLeft}H REMAINING. JACK OUT OR FACE LETHAL TOXICITY.`);
+        }
+        
+        if (updatedMeatspace.lethalDamage) {
+          sfx.flatline();
+          addLog('> CRITICAL: NUTRIENT DEPLETION. IV BAGS EMPTY. TOXICITY CRITICAL.');
+          addLog(`> LETHAL ${updatedMeatspace.isFBC ? 'SDP' : 'NEURAL'} DAMAGE IMMINENT. FORCED JACK OUT.`);
+          if (updatedMeatspace.isFBC) {
+            useMeatspaceStore.getState().takePhysicalDamage(15);
+          } else {
+            useMeatspaceStore.getState().takeNeuralDamage(10);
+          }
+          setTimeout(() => onJackOut(), 2000);
+          return;
+        }
+        
+        // Auto-consume nutrient pack at 24h intervals
+        if (updatedMeatspace.nutrientPacks > 0 && updatedMeatspace.immersionTimer % 24 === 0 && updatedMeatspace.immersionTimer > 0) {
+          addLog(`> NUTRIENT PACK CONSUMED. ${updatedMeatspace.nutrientPacks - 1} REMAINING.`);
         }
       }
 

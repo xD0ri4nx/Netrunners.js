@@ -1,12 +1,42 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRoutingStore } from '../store/routingStore';
 import { useTerminalStore } from '../store/terminalStore';
 import { useCyberdeckStore } from '../store/cyberdeckStore';
-import { LDL_DATABASE, CORP_THEMES } from '../data/ldlDatabase';
+import { LDL_DATABASE, CORP_THEMES, getSubNodes } from '../data/ldlDatabase';
 import { sfx } from '../utils/sfx';
 
 export function WorldMap({ onExecute, onAbort }) {
-  const [activeRegion, setActiveRegion] = useState('na'); // Default to North America
+  const [activeRegion, setActiveRegion] = useState('na');
+  const [showSubNodes, setShowSubNodes] = useState(false);
+  const [selectedMainLdl, setSelectedMainLdl] = useState(null);
+  const [showSpaceMap, setShowSpaceMap] = useState(false);
+  const mapRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [scrollPos, setScrollPos] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e) => {
+    if (e.target.closest('button')) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - scrollPos.x, y: e.clientY - scrollPos.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !mapRef.current) return;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    const maxX = mapRef.current.scrollWidth - mapRef.current.clientWidth;
+    const maxY = mapRef.current.scrollHeight - mapRef.current.clientHeight;
+    const clampedX = Math.max(0, Math.min(newX, maxX));
+    const clampedY = Math.max(0, Math.min(newY, maxY));
+    setScrollPos({ x: clampedX, y: clampedY });
+    mapRef.current.scrollLeft = clampedX;
+    mapRef.current.scrollTop = clampedY;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   const currentLdl = useRoutingStore(state => state.currentLdl);
   const routeHistory = useRoutingStore(state => state.routeHistory);
@@ -20,7 +50,15 @@ export function WorldMap({ onExecute, onAbort }) {
 
   const addLog = useTerminalStore(state => state.addLog);
 
-  const ldlNodes = Object.values(LDL_DATABASE);
+  const isEarthMap = !showSpaceMap;
+  const isSpaceMap = showSpaceMap;
+  
+  const earthLdlNodes = Object.values(LDL_DATABASE).filter(ldl => ldl.isMain && ldl.region !== 'orbit' && ldl.region !== 'luna' && ldl.region !== 'mars');
+  const spaceLdlNodes = Object.values(LDL_DATABASE).filter(ldl => ldl.isMain && (ldl.region === 'orbit' || ldl.region === 'luna' || ldl.region === 'mars'));
+  const ldlNodes = isSpaceMap ? spaceLdlNodes : earthLdlNodes;
+
+  const currentLdlData = currentLdl ? LDL_DATABASE[currentLdl] : null;
+  const canAccessSpace = currentLdlData && currentLdlData.isEquatorial;
 
   const REGION_TABS = [
     { id: 'na', label: 'N.AMERICA' },
@@ -28,13 +66,47 @@ export function WorldMap({ onExecute, onAbort }) {
     { id: 'euro', label: 'EUROPE' },
     { id: 'asia', label: 'PACIFICA' },
     { id: 'equat', label: 'EQUATORIAL' },
-    { id: 'space', label: 'DEEP SPACE' },
     { id: 'wild', label: 'WILD ZONE' }
   ];
+
+  const handleSpaceClick = () => {
+    if (!canAccessSpace) {
+      sfx.error();
+      addLog("> ERROR: ORBITAL ACCESS REQUIRES EQUATORIAL GRID.");
+      return;
+    }
+    sfx.click();
+    setShowSpaceMap(true);
+    setActiveRegion('space');
+    addLog("> LAUNCHING TO ORBITAL GRID...");
+  };
+
+  const handleReturnToEarth = () => {
+    sfx.click();
+    const backLink = currentLdlData?.backLink || 'nairobi';
+    setShowSpaceMap(false);
+    setActiveRegion('equat');
+    setStartingLdl(backLink);
+    addLog(`> RETURNING TO EARTH VIA ${LDL_DATABASE[backLink]?.name.toUpperCase()}...`);
+  };
 
   const handleNodeClick = (targetId) => {
     sfx.click();
     const target = LDL_DATABASE[targetId];
+    
+    const subNodesForLdl = getSubNodes(targetId);
+    if (!currentLdl && subNodesForLdl.length > 0) {
+      setSelectedMainLdl(targetId);
+      setShowSubNodes(true);
+      addLog(`> ${target.name.toUpperCase()} DETECTED. SUB-NODES AVAILABLE.`);
+      return;
+    }
+
+    if (isSpaceMap) {
+      setStartingLdl(targetId);
+      addLog(`> ORBITAL NAVIGATOR SET: ${target.name.toUpperCase()}.`);
+      return;
+    }
 
     if (!currentLdl) {
       if (target.region !== 'earth' && !isCellular) {
@@ -43,7 +115,6 @@ export function WorldMap({ onExecute, onAbort }) {
         return;
       }
       if (isCellular && target.region !== 'earth') {
-        const reducedTrace = Math.max(0, target.traceMod - 1);
         setStartingLdl(targetId);
         addLog(`> CELLULAR DECK ACTIVE. ORBITAL ROUTING INITIATED AT ${target.name.toUpperCase()}. TRACE RISK REDUCED.`);
         return;
@@ -123,7 +194,7 @@ export function WorldMap({ onExecute, onAbort }) {
   return (
     <div className="flex flex-col items-center w-full h-full max-w-4xl bg-black/90 border-2 border-neon-green p-4 shadow-[0_0_30px_#00ffcc40] z-50">
       <div className="flex justify-between items-center w-full border-b border-neon-green pb-2 mb-4">
-        <h2 className="text-xl font-bold tracking-widest text-shadow-glow">NAVIGATOR V1.4</h2>
+        <h2 className="text-xl font-bold tracking-widest text-shadow-glow">NAVIGATOR {isSpaceMap ? 'V1.5 - ORBITAL' : 'V1.4'}</h2>
         <div className="flex gap-4 text-xs sm:text-sm font-bold">
           <span className="text-teal-400">DEFENSE: {traceDefense}</span>
           <span className="text-red-500 animate-pulse">RISK: {traceRisk}</span>
@@ -143,7 +214,15 @@ export function WorldMap({ onExecute, onAbort }) {
         ))}
       </div>
 
-      <div className="relative w-full h-[350px] sm:h-[400px] border border-neon-green/30 bg-green-900/10 overflow-hidden mb-4 rounded">
+      <div 
+        ref={mapRef}
+        className="relative w-full h-[350px] sm:h-[400px] border border-neon-green/30 bg-green-900/10 overflow-hidden mb-4 rounded cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <div className="min-w-[120%] min-h-[120%] relative">
         
         {/* Route Lines Layer */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
@@ -151,11 +230,15 @@ export function WorldMap({ onExecute, onAbort }) {
             if (index === 0) return null;
             const prev = LDL_DATABASE[routeHistory[index - 1]];
             const curr = LDL_DATABASE[id];
+            const prevIsSpace = prev.region === 'orbit' || prev.region === 'luna' || prev.region === 'mars';
+            const currIsSpace = curr.region === 'orbit' || curr.region === 'luna' || curr.region === 'mars';
+            const prevY = isSpaceMap && prevIsSpace ? (prev.y / 32) * 100 : (prev.y / 24) * 100;
+            const currY = isSpaceMap && currIsSpace ? (curr.y / 32) * 100 : (curr.y / 24) * 100;
             return (
               <line 
                 key={`${prev.id}-${curr.id}`}
-                x1={`${(prev.x / 20) * 100}%`} y1={`${(prev.y / 24) * 100}%`} 
-                x2={`${(curr.x / 20) * 100}%`} y2={`${(curr.y / 24) * 100}%`} 
+                x1={`${(prev.x / 20) * 100}%`} y1={`${prevY}%`} 
+                x2={`${(curr.x / 20) * 100}%`} y2={`${currY}%`} 
                 stroke="#00ffcc" strokeWidth="2" opacity="0.6"
               />
             );
@@ -168,19 +251,21 @@ export function WorldMap({ onExecute, onAbort }) {
           const isVisited = routeHistory.includes(node.id);
           const isActiveRegion = node.group === activeRegion;
 
-          return (
-            <div 
-              key={node.id}
-              onClick={() => isActiveRegion ? handleNodeClick(node.id) : null}
-              className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full transition-all z-20 
-                ${isActiveRegion ? 'pointer-events-auto hover:scale-150 cursor-pointer' : 'pointer-events-none opacity-20'}
-                ${node.isGhostTown ? 'bg-purple-900 border-2 border-purple-500 animate-pulse' :
-                  isCurrent ? 'bg-white shadow-[0_0_15px_#ffffff] animate-pulse opacity-100' : 
-                  isVisited ? 'bg-green-700 opacity-100' : 
-                  node.region === 'earth' ? 'bg-neon-green hover:bg-white' : 
-                  node.region === 'orbit' ? 'bg-blue-400 hover:bg-white' : 'bg-red-500 hover:bg-white'}
-              `}
-              style={{ left: `${(node.x / 20) * 100}%`, top: `${(node.y / 24) * 100}%` }}
+const isSpaceRegion = node.region === 'orbit' || node.region === 'luna' || node.region === 'mars';
+              const xPos = isSpaceMap ? (node.x / 20) * 100 : (node.x / 20) * 100;
+              const yPos = isSpaceMap ? (node.y / 32) * 100 : (node.y / 24) * 100;
+              return (
+                <div 
+                  key={node.id}
+                  onClick={() => isActiveRegion ? handleNodeClick(node.id) : null}
+                  className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full transition-all z-20 
+                    ${isActiveRegion ? 'pointer-events-auto hover:scale-150 cursor-pointer' : 'pointer-events-none opacity-20'}
+                    ${node.isGhostTown ? 'bg-purple-900 border-2 border-purple-500 animate-pulse' :
+                      isCurrent ? 'bg-white shadow-[0_0_15px_#ffffff] animate-pulse opacity-100' : 
+                      isVisited ? 'bg-green-700 opacity-100' : 
+                      isSpaceRegion ? 'bg-blue-400 hover:bg-white' : 'bg-neon-green hover:bg-white'}
+                  `}
+                  style={{ left: `${xPos}%`, top: `${yPos}%` }}
               title={`${node.name}\nSec: ${node.sec}${node.corp && CORP_THEMES[node.corp] ? '\nCorp: ' + CORP_THEMES[node.corp].name : ''}${node.isGhostTown ? '\nGHOST TOWN: Feral ICE' : ''}`}
             >
               <span className={`absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap font-mono text-[9px] sm:text-[10px] ${node.isGhostTown ? 'text-purple-400' : 'text-neon-green'} drop-shadow-md pointer-events-none ${isActiveRegion ? 'opacity-80' : 'opacity-0'}`}>
@@ -201,24 +286,116 @@ export function WorldMap({ onExecute, onAbort }) {
             </div>
           </>
         )}
+        </div>
       </div>
 
+      {/* SUB-NODE SELECTION MODAL */}
+      {showSubNodes && selectedMainLdl && (
+        <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+          <div className="bg-black border-2 border-neon-green p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-neon-green mb-4">
+              {LDL_DATABASE[selectedMainLdl]?.name} - SUB-NODES
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              Select a sub-network or access the main corporate grid directly.
+            </p>
+            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
+              {getSubNodes(selectedMainLdl).map(subNode => (
+                <button
+                  key={subNode.id}
+                  onClick={() => {
+                    sfx.click();
+                    setShowSubNodes(false);
+                    setStartingLdl(subNode.id);
+                    addLog(`> WEEFLERUNNER NODE DETECTED. JACKING IN TO ${subNode.name.toUpperCase()}...`);
+                  }}
+                  className={`w-full text-left p-3 border transition-colors
+                    ${subNode.isWeefle ? 'border-pink-500/50 hover:bg-pink-900/30 text-pink-300' : 
+                      subNode.isGhostTown ? 'border-purple-500/50 hover:bg-purple-900/30 text-purple-300' : 
+                      'border-neon-green/50 hover:bg-neon-green/20 text-neon-green'}
+                  `}
+                >
+                  <div className="font-bold text-sm">{subNode.name}</div>
+                  <div className="text-xs opacity-70">Security: {subNode.sec} {subNode.isWeefle ? '| WEEFLERUNNER GRID' : ''}{subNode.isGhostTown ? '| GHOST TOWN' : ''}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  sfx.click();
+                  setShowSubNodes(false);
+                  const target = LDL_DATABASE[selectedMainLdl];
+                  setStartingLdl(selectedMainLdl);
+                  addLog(`> ROUTING INITIATED AT ${target.name.toUpperCase()}.`);
+                }}
+                className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors"
+              >
+                [ MAIN GRID ]
+              </button>
+              <button
+                onClick={() => {
+                  sfx.click();
+                  setShowSubNodes(false);
+                  setSelectedMainLdl(null);
+                }}
+                className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors"
+              >
+                [ CANCEL ]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-4 w-full justify-between mt-auto">
-        <button 
-          onClick={onAbort} 
-          className="border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base"
-        >
-          [ ABORT ROUTE ]
-        </button>
-        <button 
-          onClick={onExecute}
-          disabled={!currentLdl}
-          className={`px-4 sm:px-6 py-2 border-2 font-bold cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base
-            ${currentLdl ? 'bg-green-950 text-white border-neon-green hover:bg-neon-green hover:text-black' : 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed'}
-          `}
-        >
-          [ EXECUTE DATAFORT BREACH ]
-        </button>
+        {isSpaceMap ? (
+          <button 
+            onClick={handleReturnToEarth}
+            className="border border-blue-400 text-blue-400 px-6 py-2 hover:bg-blue-400 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base"
+          >
+            [ RETURN TO EARTH ]
+          </button>
+        ) : (
+          <button 
+            onClick={onAbort} 
+            className="border border-red-500 text-red-500 px-6 py-2 hover:bg-red-500 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base"
+          >
+            [ ABORT ROUTE ]
+          </button>
+        )}
+        
+        {isSpaceMap ? (
+          <button 
+            onClick={onExecute}
+            disabled={!currentLdl}
+            className={`px-4 sm:px-6 py-2 border-2 font-bold cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base
+              ${currentLdl ? 'bg-blue-950 text-white border-blue-400 hover:bg-blue-400 hover:text-black' : 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed'}
+            `}
+          >
+            [ INITIATE ORBITAL BREACH ]
+          </button>
+        ) : (
+          <>
+            {canAccessSpace && (
+              <button 
+                onClick={handleSpaceClick}
+                className="border border-cyan-400 text-cyan-400 px-4 py-2 hover:bg-cyan-400 hover:text-black cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base animate-pulse"
+              >
+                [ LAUNCH TO ORBIT ]
+              </button>
+            )}
+            <button 
+              onClick={onExecute}
+              disabled={!currentLdl}
+              className={`px-4 sm:px-6 py-2 border-2 font-bold cursor-pointer transition-colors z-50 pointer-events-auto text-sm sm:text-base
+                ${currentLdl ? 'bg-green-950 text-white border-neon-green hover:bg-neon-green hover:text-black' : 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed'}
+              `}
+            >
+              [ EXECUTE DATAFORT BREACH ]
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
