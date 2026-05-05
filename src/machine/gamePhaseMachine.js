@@ -1,6 +1,11 @@
-import { setup } from 'xstate';
+import { setup, assign } from 'xstate';
 
-export const gamePhaseMachine = setup({}).createMachine({
+export const gamePhaseMachine = setup({
+  types: {
+    events: {}
+  },
+  actions: {}
+}).createMachine({
   id: 'gamePhase',
   initial: 'safehouse',
   states: {
@@ -10,7 +15,8 @@ export const gamePhaseMachine = setup({}).createMachine({
         OPEN_SHOP: { target: 'shop' },
         OPEN_JOBS: { target: 'jobs' },
         OPEN_REPAIR: { target: 'repair' },
-        TRIGGER_RAID: { target: 'raid' }
+        TRIGGER_RAID: { target: 'raid' },
+        JACK_OUT: { target: 'safehouse' }
       }
     },
     raid: {
@@ -29,7 +35,8 @@ export const gamePhaseMachine = setup({}).createMachine({
       on: {
         RIVAL_ENCOUNTER: { target: 'rival_encounter' },
         INITIATE_LINK: { target: 'jacking_in' },
-        CANCEL: { target: 'safehouse' }
+        CANCEL: { target: 'safehouse' },
+        JACK_OUT: { target: 'safehouse' }
       }
     },
     rival_encounter: {

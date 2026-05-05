@@ -11,10 +11,12 @@ import { useMissionStore } from './store/missionStore';
 import { sfx } from './utils/sfx';
 import { ShopPanel } from './components/ShopPanel';
 import { TechiePanel } from './components/TechiePanel';
+import { TuningPanel } from './components/TuningPanel';
 import { ProgrammingPanel } from './components/ProgrammingPanel';
 import { BrainwarePanel } from './components/BrainwarePanel';
 import RipperdocPanel from './components/RipperdocPanel';
 import FixerPanel from './components/FixerPanel';
+import { CharacterCreation } from './components/CharacterCreation';
 
 export default function App() {
   const [state, send] = useMachine(gamePhaseMachine);
@@ -24,12 +26,20 @@ export default function App() {
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [showProgramming, setShowProgramming] = useState(false);
   const [showTechie, setShowTechie] = useState(false);
+  const [showTuning, setShowTuning] = useState(false);
   const [showRipperdoc, setShowRipperdoc] = useState(false);
   const [showFixer, setShowFixer] = useState(false);
   const [showBrainware, setShowBrainware] = useState(false);
+  const [showCharacterCreation, setShowCharacterCreation] = useState(false);
 
   const [showFoodMenu, setShowFoodMenu] = useState(false);
   const foodMenuRef = useRef(null);
+
+  const [showHousingMenu, setShowHousingMenu] = useState(false);
+  const housingMenuRef = useRef(null);
+
+  const [showUtilityMenu, setShowUtilityMenu] = useState(false);
+  const utilityMenuRef = useRef(null);
 
   const [rivalEncounter, setRivalEncounter] = useState(null);
 
@@ -51,12 +61,18 @@ export default function App() {
       if (foodMenuRef.current && !foodMenuRef.current.contains(event.target)) {
         setShowFoodMenu(false);
       }
+      if (housingMenuRef.current && !housingMenuRef.current.contains(event.target)) {
+        setShowHousingMenu(false);
+      }
+      if (utilityMenuRef.current && !utilityMenuRef.current.contains(event.target)) {
+        setShowUtilityMenu(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [foodMenuRef]);
+  }, [foodMenuRef, housingMenuRef, utilityMenuRef]);
 
   useEffect(() => {
     if (state.matches('safehouse')) {
@@ -391,6 +407,9 @@ export default function App() {
                   <button onClick={() => { sfx.click(); setShowTechie(true); }} className={`w-full px-4 py-3 border transition-all cursor-pointer ${meatspace.isFBC ? 'bg-black text-orange-400 border-orange-400/50 hover:bg-orange-400 hover:text-black' : 'bg-black text-yellow-400 border-yellow-400/50 hover:bg-yellow-400 hover:text-black'}`}>
                     [ TECHIE VISIT ]
                   </button>
+                  <button onClick={() => { sfx.click(); setShowTuning(true); }} className="bg-black text-orange-400 w-full px-4 py-3 border border-orange-400/50 hover:bg-orange-400 hover:text-black transition-all cursor-pointer">
+                    [ HARDWARE TUNING ]
+                  </button>
                   {meatspace.isFBC && meatspace.ownedChassis.length > 1 && (
                     <button 
                       onClick={() => {
@@ -520,7 +539,7 @@ export default function App() {
                   <button 
                     onClick={() => {
                       sfx.click();
-                      const result = useMeatspaceStore.getState().rest();
+                      useMeatspaceStore.getState().rest();
                       useTerminalStore.getState().addLog(`> RESTED. SLEEP RESTORED TO 100%.`);
                     }} 
                     className="bg-black text-blue-400 w-full px-4 py-2 border border-blue-500/50 hover:bg-blue-500 hover:text-black transition-all cursor-pointer text-xs"
@@ -549,56 +568,169 @@ export default function App() {
                   >
                     [ BUY STIMULANT (100 eb) ]
                   </button>
-                  <button 
-                    onClick={() => {
-                      sfx.click();
-                      const result = useMeatspaceStore.getState().payTelecomBill();
-                      useTerminalStore.getState().addLog(`> ${result.message}`);
-                    }} 
-                    disabled={meatspace.telecomBill <= 0 || meatspace.funds < meatspace.telecomBill}
-                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.telecomBill > 0 && meatspace.funds >= meatspace.telecomBill ? 'bg-black text-teal-400 border-teal-500/50 hover:bg-teal-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
-                  >
-                    [ PAY TELECOM ({meatspace.telecomBill} eb) ]
-                  </button>
-                  <button 
-                    onClick={() => {
-                      sfx.click();
-                      const result = useMeatspaceStore.getState().utilityFraud();
-                      useTerminalStore.getState().addLog(`> ${result.message}`);
-                    }} 
-                    disabled={meatspace.telecomBill <= 0}
-                    className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.telecomBill > 0 ? 'bg-black text-red-400 border-red-500/50 hover:bg-red-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
-                  >
-                    [ UTILITY FRAUD (Prog+D10 vs 20) ]
-                  </button>
-                  {!meatspace.isStreet && (
+                  <div className="relative w-full" ref={utilityMenuRef}>
                     <button 
                       onClick={() => {
                         sfx.click();
-                        // Simple housing upgrade cycle: apartment -> penthouse -> coffin
-                        const current = meatspace.housingType;
-                        if (current === 'apartment' && meatspace.funds >= 3000) {
-                          useMeatspaceStore.getState().deductFunds(3000);
-                          useMeatspaceStore.setState({ housingType: 'penthouse', housingCost: 1000 });
-                          useTerminalStore.getState().addLog(`> HOUSING UPGRADED: CORPORATE PENTHOUSE (1000 eb/month).`);
-                        } else if (current === 'penthouse' && meatspace.funds >= 100) {
-                          useMeatspaceStore.getState().deductFunds(100);
-                          useMeatspaceStore.setState({ housingType: 'coffin', housingCost: 150 });
-                          useTerminalStore.getState().addLog(`> HOUSING DOWNGRADED: COFFIN/CUBE (150 eb/month).`);
-                        } else if (current === 'coffin' && meatspace.funds >= 200) {
-                          useMeatspaceStore.getState().deductFunds(200);
-                          useMeatspaceStore.setState({ housingType: 'apartment', housingCost: 200 });
-                          useTerminalStore.getState().addLog(`> HOUSING UPGRADED: STUDIO APARTMENT (200 eb/month).`);
-                        } else {
-                          useTerminalStore.getState().addLog(`> ERROR: INSUFFICIENT FUNDS OR ALREADY AT TARGET.`);
-                        }
+                        setShowUtilityMenu(!showUtilityMenu);
                       }} 
-                      className="bg-black text-cyan-400 w-full px-4 py-3 border border-cyan-500/50 hover:bg-cyan-500 hover:text-black transition-all cursor-pointer text-xs"
+                      className={`w-full px-4 py-3 border transition-all cursor-pointer font-bold flex justify-between items-center ${meatspace.telecomBill > 0 ? 'bg-black text-teal-400 border-teal-500/50 hover:bg-teal-500 hover:text-black' : 'bg-black text-gray-500 border-gray-700 hover:bg-gray-800'}`}
                     >
-                      {meatspace.housingType === 'apartment' ? '[ UPGRADE TO PENTHOUSE (3000 eb) ]' : 
-                       meatspace.housingType === 'penthouse' ? '[ DOWNGRADE TO COFFIN (100 eb) ]' : 
-                       '[ UPGRADE TO APARTMENT (200 eb) ]'}
+                      <span>[ UTILITIES ]</span>
+                      <span>{showUtilityMenu ? '▲' : '▼'}</span>
                     </button>
+                    
+                    {showUtilityMenu && (
+                      <div className="absolute top-full left-0 w-full bg-black border-2 border-teal-500 shadow-[0_0_20px_rgba(20,184,166,0.3)] z-50 mt-1 animate-dropdown">
+                        <div className="p-2 border-b border-teal-500/30 bg-teal-500/10 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-teal-500 uppercase">Utility Status</span>
+                          <span className="text-[10px] font-bold text-teal-500 uppercase">TELECOM: {meatspace.telecomBill} eb ({meatspace.routingMinutes} min)</span>
+                        </div>
+                        
+                        <div className="flex flex-col">
+                          <button 
+                            onClick={() => {
+                              sfx.click();
+                              const result = useMeatspaceStore.getState().payTelecomBill();
+                              useTerminalStore.getState().addLog(`> ${result.message}`);
+                              setShowUtilityMenu(false);
+                            }} 
+                            disabled={meatspace.telecomBill <= 0 || meatspace.funds < meatspace.telecomBill}
+                            className={`px-4 py-3 text-left transition-all flex justify-between items-center border-b border-teal-500/20 last:border-0
+                              ${meatspace.telecomBill > 0 && meatspace.funds >= meatspace.telecomBill ? 'text-teal-400 hover:bg-teal-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">○ PAY TELECOM BILL</span>
+                              <span className="text-[10px] opacity-70">Clear all charges</span>
+                            </div>
+                            <span className="font-bold text-xs">{meatspace.telecomBill} eb</span>
+                          </button>
+
+                          <button 
+                            onClick={() => {
+                              sfx.click();
+                              const result = useMeatspaceStore.getState().utilityFraud();
+                              useTerminalStore.getState().addLog(`> ${result.message}`);
+                              setShowUtilityMenu(false);
+                            }} 
+                            disabled={meatspace.telecomBill <= 0}
+                            className={`px-4 py-3 text-left transition-all flex justify-between items-center
+                              ${meatspace.telecomBill > 0 ? 'text-red-400 hover:bg-red-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">○ UTILITY FRAUD</span>
+                              <span className="text-[10px] opacity-70">Prog+D10 vs 20</span>
+                            </div>
+                            <span className="font-bold text-xs">FREE</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {!meatspace.isStreet && (
+                    <div className="relative w-full" ref={housingMenuRef}>
+                      <button 
+                        onClick={() => {
+                          sfx.click();
+                          setShowHousingMenu(!showHousingMenu);
+                        }} 
+                        className="bg-black text-cyan-400 w-full px-4 py-3 border border-cyan-500/50 hover:bg-cyan-500 hover:text-black transition-all cursor-pointer font-bold flex justify-between items-center"
+                      >
+                        <span>[ HOUSING ]</span>
+                        <span>{showHousingMenu ? '▲' : '▼'}</span>
+                      </button>
+                      
+                      {showHousingMenu && (
+                        <div className="absolute top-full left-0 w-full bg-black border-2 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)] z-50 mt-1 animate-dropdown">
+                          <div className="p-2 border-b border-cyan-500/30 bg-cyan-500/10 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-cyan-500 uppercase">Housing Status</span>
+                            <span className="text-[10px] font-bold text-cyan-500 uppercase">RENT: {meatspace.housingCost} eb/mo</span>
+                          </div>
+                          
+                          <div className="flex flex-col">
+                            <button 
+                              onClick={() => {
+                                sfx.click();
+                                if (meatspace.housingType !== 'coffin') {
+                                  if (meatspace.funds >= 200) {
+                                    useMeatspaceStore.getState().deductFunds(200);
+                                    useMeatspaceStore.setState({ housingType: 'apartment', housingCost: 200 });
+                                    useTerminalStore.getState().addLog(`> HOUSING: STUDIO APARTMENT (200 eb/month).`);
+                                  } else {
+                                    useTerminalStore.getState().addLog(`> INSUFFICIENT FUNDS.`);
+                                    sfx.error();
+                                  }
+                                }
+                                setShowHousingMenu(false);
+                              }} 
+                              disabled={meatspace.housingType === 'coffin' && meatspace.funds < 200}
+                              className={`px-4 py-3 text-left transition-all flex justify-between items-center border-b border-cyan-500/20
+                                ${meatspace.housingType === 'coffin' ? (meatspace.funds >= 200 ? 'text-cyan-400 hover:bg-cyan-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50') : 'text-cyan-700 cursor-not-allowed opacity-30'}`}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm">○ COFFIN/CUBE</span>
+                                <span className="text-[10px] opacity-70">Combat Zone</span>
+                              </div>
+                              <span className="font-bold text-xs">{meatspace.housingType === 'coffin' ? 'CURRENT' : '150 eb/mo'}</span>
+                            </button>
+
+                            <button 
+                              onClick={() => {
+                                sfx.click();
+                                if (meatspace.housingType !== 'apartment') {
+                                  if (meatspace.funds >= (meatspace.housingType === 'penthouse' ? 100 : 200)) {
+                                    const cost = meatspace.housingType === 'penthouse' ? 100 : 200;
+                                    useMeatspaceStore.getState().deductFunds(cost);
+                                    useMeatspaceStore.setState({ housingType: 'apartment', housingCost: 200 });
+                                    useTerminalStore.getState().addLog(`> HOUSING: STUDIO APARTMENT (200 eb/month).`);
+                                  } else {
+                                    useTerminalStore.getState().addLog(`> INSUFFICIENT FUNDS.`);
+                                    sfx.error();
+                                  }
+                                }
+                                setShowHousingMenu(false);
+                              }} 
+                              disabled={meatspace.housingType === 'apartment'}
+                              className={`px-4 py-3 text-left transition-all flex justify-between items-center border-b border-cyan-500/20
+                                ${meatspace.housingType === 'apartment' ? 'text-cyan-400 cursor-not-allowed opacity-50' : (meatspace.funds >= 200 ? 'text-cyan-400 hover:bg-cyan-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50')}`}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm">○ STUDIO APARTMENT</span>
+                                <span className="text-[10px] opacity-70">Moderate Zone | +Data Creche</span>
+                              </div>
+                              <span className="font-bold text-xs">{meatspace.housingType === 'apartment' ? 'CURRENT' : '200 eb/mo'}</span>
+                            </button>
+
+                            <button 
+                              onClick={() => {
+                                sfx.click();
+                                if (meatspace.housingType !== 'penthouse') {
+                                  if (meatspace.funds >= (meatspace.housingType === 'apartment' ? 3000 : 1000)) {
+                                    const cost = meatspace.housingType === 'apartment' ? 3000 : 1000;
+                                    useMeatspaceStore.getState().deductFunds(cost);
+                                    useMeatspaceStore.setState({ housingType: 'penthouse', housingCost: 1000 });
+                                    useTerminalStore.getState().addLog(`> HOUSING: CORPORATE PENTHOUSE (1000 eb/month).`);
+                                  } else {
+                                    useTerminalStore.getState().addLog(`> INSUFFICIENT FUNDS.`);
+                                    sfx.error();
+                                  }
+                                }
+                                setShowHousingMenu(false);
+                              }} 
+                              disabled={meatspace.housingType === 'penthouse'}
+                              className={`px-4 py-3 text-left transition-all flex justify-between items-center
+                                ${meatspace.housingType === 'penthouse' ? 'text-cyan-400 cursor-not-allowed opacity-50' : (meatspace.funds >= (meatspace.housingType === 'apartment' ? 3000 : 1000) ? 'text-cyan-400 hover:bg-cyan-500/20 cursor-pointer' : 'text-gray-600 cursor-not-allowed opacity-50')}`}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm">○ CORPORATE PENTHOUSE</span>
+                                <span className="text-[10px] opacity-70">High Zone | Clean Landline (-2 Trace)</span>
+                              </div>
+                              <span className="font-bold text-xs">{meatspace.housingType === 'penthouse' ? 'CURRENT' : '1000 eb/mo'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                   {/* Phase 17: Bodyweight & Data Creche */}
                   {!meatspace.hasDataCreche && !meatspace.isStreet && (
@@ -629,6 +761,17 @@ export default function App() {
                     className={`w-full px-4 py-2 border text-xs transition-all cursor-pointer ${meatspace.hasBodyweightSystem && meatspace.funds >= 100 ? 'bg-black text-orange-400 border-orange-500/50 hover:bg-orange-500 hover:text-black' : 'bg-gray-900 text-gray-500 border-gray-700 cursor-not-allowed'}`}
                   >
                     [ BUY NUTRIENT PACK (100 eb) ]
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (confirm('Start character creation?')) {
+                        sfx.click();
+                        setShowCharacterCreation(true);
+                      }
+                    }} 
+                    className="w-full px-4 py-3 border border-red-500/50 hover:bg-red-500 hover:text-black transition-all cursor-pointer text-xs font-bold mt-2"
+                  >
+                    [ NEW CHARACTER ]
                   </button>
                 </div>
             )}
@@ -902,15 +1045,28 @@ export default function App() {
           </div>
         )}
 
+        {/* TUNING PANEL */}
+        {showTuning && (
+          <TuningPanel onClose={() => setShowTuning(false)} />
+        )}
+
         {/* RIPPERDOC PANEL */}
         {showRipperdoc && (
           <RipperdocPanel onClose={() => setShowRipperdoc(false)} />
         )}
 
-        {/* FIXER PANEL */}
+{/* FIXER PANEL */}
         {showFixer && (
           <FixerPanel onClose={() => setShowFixer(false)} />
         )}
+
+        {/* CHARACTER CREATION MODAL */}
+        {showCharacterCreation && (
+          <CharacterCreation 
+            onClose={() => setShowCharacterCreation(false)} 
+            onStart={() => setShowCharacterCreation(false)} 
+          />
+        )}
       </div>
-  );
+    );
 }

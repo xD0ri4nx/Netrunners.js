@@ -25,6 +25,12 @@ export const useMeatspaceStore = create(
       handle: 'Unknown',
       int: 8,
       ref: 6,
+      tech: 5,
+      cool: 5,
+      attr: 5,
+      luck: 5,
+      ma: 6,
+      body: 5,
       interfaceLvl: 4,
       programming: 3,
       funds: 1500,
@@ -55,54 +61,61 @@ export const useMeatspaceStore = create(
       stimulants: 0,
       hoursAwake: 0,
       isStimulated: false,
-telecomBill: 0,
-        routingMinutes: 0,
-        hasBodyweightSystem: false,
-        nutrientPacks: 0,
-        isImmersionMode: false,
-        immersionTimer: 0,
-        systemShockActive: false,
-        systemShockHours: 0,
-        immersionHoursTotal: 0,
-        hasDataCreche: false,
-        crecheInstalled: false,
-        videoboardActive: false,
-        externalThreatAlert: false,
-        isFBC: false,
-        hasBiopod: false,
-        currentChassis: null,
-        ownedChassis: [],
-        sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
-        maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
-        fbcUpgrades: {
-          overclocked: { ref: 0, ma: 0, body: 0 },
-          ccplRetrofit: false,
-          quickMounts: false,
-          hardenedShielding: false
-        },
-        skills: {
-         interface: 4,
-         programming: 3,
-         electronics: 2,
-         cryptography: 1,
-         librarySearch: 2,
-         handgun: 3,
-         brawling: 2
-       },
-       humanity: 100,
-       maxHumanity: 100,
-       cyberware: [],
-       cyberpsychosisLevel: 0,
-       riots: 0,
-       factionReputation: {
-         arasaka: 0,
-         militech: 0,
-         petrochem: 0,
-         biotechnica: 0,
-         eurospace: 0,
-         sovspace: 0
-       },
-       vipMarketUnlocked: false,
+      telecomBill: 0,
+      routingMinutes: 0,
+      hasBodyweightSystem: false,
+      nutrientPacks: 0,
+      isImmersionMode: false,
+      immersionTimer: 0,
+      systemShockActive: false,
+      systemShockHours: 0,
+      immersionHoursTotal: 0,
+      hasDataCreche: false,
+      crecheInstalled: false,
+      videoboardActive: false,
+      externalThreatAlert: false,
+      isFBC: false,
+      hasBiopod: false,
+      currentChassis: null,
+      ownedChassis: [],
+      sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+      maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+      fbcUpgrades: {
+        overclocked: { ref: 0, ma: 0, body: 0 },
+        ccplRetrofit: false,
+        quickMounts: false,
+        hardenedShielding: false
+      },
+      skills: {
+        interface: 4,
+        programming: 3,
+        electronics: 2,
+        cryptography: 1,
+        librarySearch: 2,
+        handgun: 3,
+        brawling: 2,
+        awareness: 1,
+        basicTech: 1,
+        education: 1,
+        systemKnowledge: 1,
+        cyberTech: 1,
+        cyberdeckDesign: 1,
+        composition: 1
+      },
+      humanity: 100,
+      maxHumanity: 100,
+      cyberware: [],
+      cyberpsychosisLevel: 0,
+      riots: 0,
+      factionReputation: {
+        arasaka: 0,
+        militech: 0,
+        petrochem: 0,
+        biotechnica: 0,
+        eurospace: 0,
+        sovspace: 0
+      },
+      vipMarketUnlocked: false,
 
       addFunds: (amount) => set((state) => ({ funds: state.funds + amount })),
       takeNeuralDamage: (amount) => set((state) => ({
@@ -459,7 +472,6 @@ telecomBill: 0,
         return { speed: 1, mu: 12, dataWalls: 4 };
       },
 
-      // Phase 18: FBC Functions
       convertToFBC: (chassisId, cost = 30000) => {
         const state = get();
         if (state.isFBC) return { success: false, message: 'ALREADY FBC CONVERTED' };
@@ -583,10 +595,6 @@ telecomBill: 0,
         const currentChassis = state.ownedChassis.find(c => c.id === state.currentChassis);
         if (!currentChassis) return { success: false, message: 'NO CHASSIS' };
         
-        const maxRef = currentChassis.baseStats.ref + 2;
-        const maxMa = currentChassis.baseStats.ma + 2;
-        const maxBody = currentChassis.baseStats.body + 2;
-        
         const currentOverclock = currentChassis.upgrades?.overclocked || { ref: 0, ma: 0, body: 0 };
         
         if (stat === 'ref' && currentOverclock.ref >= 2) return { success: false, message: 'REF ALREADY MAX OVERCLOCKED' };
@@ -689,7 +697,7 @@ telecomBill: 0,
       clearCompletedProgram: () => set({ completedProgram: null }),
 
       setCompilationSuccess: (success) => set({ compilationSuccess: success }),
-
+ 
       rollSkillCheck: (difficulty) => {
         const state = get();
         const int = state.int;
@@ -778,186 +786,371 @@ telecomBill: 0,
         return state;
       }),
       resetIp: () => set({ ip: 0, totalIpEarned: 0 }),
-       setTimelagInterface: (value) => set({ timelagInterface: value }),
-       setTimelagReflex: (value) => set({ timelagReflex: value }),
-       installCyberware: (ware) => set((state) => {
-         const newHumanity = Math.max(0, state.humanity - ware.humanityCost);
-         const newCyberware = [...state.cyberware, ware];
-         const cpLevel = newHumanity <= 30 ? 3 : newHumanity <= 50 ? 2 : newHumanity <= 70 ? 1 : 0;
-         return {
-           cyberware: newCyberware,
-           humanity: newHumanity,
-           cyberpsychosisLevel: cpLevel,
-           riots: cpLevel >= 3 ? state.riots + 1 : state.riots
-         };
-       }),
-       removeCyberware: (wareId) => set((state) => {
-         const ware = state.cyberware.find(w => w.id === wareId);
-         if (!ware) return state;
-         const newCyberware = state.cyberware.filter(w => w.id !== wareId);
-         const newHumanity = Math.min(state.maxHumanity, state.humanity + ware.humanityCost);
-         const cpLevel = newHumanity <= 30 ? 3 : newHumanity <= 50 ? 2 : newHumanity <= 70 ? 1 : 0;
-         return {
-           cyberware: newCyberware,
-           humanity: newHumanity,
-           cyberpsychosisLevel: cpLevel
-         };
-       }),
-       getCyberwareBonus: (stat) => {
-         const state = get();
-         return state.cyberware.reduce((total, w) => total + (w.bonuses?.[stat] || 0), 0);
-       },
-       getCyberpsychosisEffects: () => {
-         const state = get();
-         const level = state.cyberpsychosisLevel;
-         return {
-           uiGlitches: level >= 1,
-           hallucinations: level >= 2,
-           forcedReckless: level >= 3,
-           detectionPenalty: level >= 2 ? -2 : level >= 1 ? -1 : 0,
-           evasionPenalty: level >= 2 ? -2 : 0
-         };
-       },
-       updateFactionRep: (faction, amount) => set((state) => {
-         const newRep = { ...state.factionReputation };
-         newRep[faction] = Math.max(-100, Math.min(100, (newRep[faction] || 0) + amount));
-         const vipUnlocked = Object.values(newRep).some(r => r >= 50);
-         return { factionReputation: newRep, vipMarketUnlocked: vipUnlocked };
-       }),
-       getFactionWantedLevel: (faction) => {
-         const state = get();
-         const rep = state.factionReputation[faction] || 0;
-         if (rep <= -50) return 3;
-         if (rep <= -20) return 2;
-         if (rep < 0) return 1;
-         return 0;
-       },
-       getEnemyBonus: (faction) => {
-         const state = get();
-         const rep = state.factionReputation[faction] || 0;
-         if (rep <= -50) return 3;
-         if (rep <= -20) return 2;
-         if (rep < 0) return 1;
-         return 0;
-       },
-       getFactionPerks: (faction) => {
-         const state = get();
-         const rep = state.factionReputation[faction] || 0;
-         return {
-           vipAccess: rep >= 50,
-           discount: rep >= 30 ? 0.2 : rep >= 20 ? 0.1 : 0,
-           iceBuff: rep <= -30 ? Math.abs(rep) / 20 : 0
-         };
-       }
-     }),
-{
-        name: 'meatspace-storage',
-        version: 6,
-              migrate: (persistedState, version) => {
-         if (version === 0 || version === 1) {
-           return {
-             ...persistedState,
-             neuralDamage: 0,
-             maxInt: persistedState.int || 8,
-             ip: 0,
-             totalIpEarned: 0,
-             timelagInterface: false,
-             timelagReflex: false,
-             skills: {
-               interface: persistedState.interfaceLvl || 4,
-               programming: persistedState.programming || 3,
-               electronics: 2,
-               cryptography: 1,
-               librarySearch: 2,
-               handgun: 3,
-               brawling: 2
-             },
-             humanity: 100,
-             maxHumanity: 100,
-             cyberware: [],
-             cyberpsychosisLevel: 0,
-             riots: 0,
-             factionReputation: {
-               arasaka: 0,
-               militech: 0,
-               petrochem: 0,
-               biotechnica: 0,
-               eurospace: 0,
-               sovspace: 0
-             },
-             vipMarketUnlocked: false
-           };
-         }
-         if (version === 2) {
-           return {
-             ...persistedState,
-             timelagInterface: persistedState.timelagInterface || false,
-             timelagReflex: persistedState.timelagReflex || false,
-             humanity: persistedState.humanity || 100,
-             maxHumanity: persistedState.maxHumanity || 100,
-             cyberware: persistedState.cyberware || [],
-             cyberpsychosisLevel: persistedState.cyberpsychosisLevel || 0,
-             riots: persistedState.riots || 0,
-             factionReputation: {
-               arasaka: 0,
-               militech: 0,
-               petrochem: 0,
-               biotechnica: 0,
-               eurospace: 0,
-               sovspace: 0
-             },
-             vipMarketUnlocked: false
-           };
-         }
-if (version === 3) {
-            return {
-              ...persistedState,
-              factionReputation: persistedState.factionReputation || {
-                arasaka: 0,
-                militech: 0,
-                petrochem: 0,
-                biotechnica: 0,
-                eurospace: 0,
-                sovspace: 0
-              },
-              vipMarketUnlocked: persistedState.vipMarketUnlocked || false
-            };
-          }
-          if (version === 4) {
-            return {
-              ...persistedState,
-              hasBodyweightSystem: false,
-              nutrientPacks: 0,
-              isImmersionMode: false,
-              immersionTimer: 0,
-              systemShockActive: false,
-              systemShockHours: 0,
-              immersionHoursTotal: 0,
-              hasDataCreche: false,
-              crecheInstalled: false,
-              videoboardActive: false,
-              externalThreatAlert: false
-            };
-          }
-          if (version === 5) {
-            return {
-              ...persistedState,
-              isFBC: false,
-              hasBiopod: false,
-              currentChassis: null,
-              ownedChassis: [],
-              sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
-              maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
-              fbcUpgrades: {
-                overclocked: { ref: 0, ma: 0, body: 0 },
-                ccplRetrofit: false,
-                quickMounts: false,
-                hardenedShielding: false
-              }
-            };
-          }
-          return persistedState;
-       }
-     }
+      setTimelagInterface: (value) => set({ timelagInterface: value }),
+      setTimelagReflex: (value) => set({ timelagReflex: value }),
+      installCyberware: (ware) => set((state) => {
+        const newHumanity = Math.max(0, state.humanity - ware.humanityCost);
+        const newCyberware = [...state.cyberware, ware];
+        const cpLevel = newHumanity <= 30 ? 3 : newHumanity <= 50 ? 2 : newHumanity <= 70 ? 1 : 0;
+        return {
+          cyberware: newCyberware,
+          humanity: newHumanity,
+          cyberpsychosisLevel: cpLevel,
+          riots: cpLevel >= 3 ? state.riots + 1 : state.riots
+        };
+      }),
+      removeCyberware: (wareId) => set((state) => {
+        const ware = state.cyberware.find(w => w.id === wareId);
+        if (!ware) return state;
+        const newCyberware = state.cyberware.filter(w => w.id !== wareId);
+        const newHumanity = Math.min(state.maxHumanity, state.humanity + ware.humanityCost);
+        const cpLevel = newHumanity <= 30 ? 3 : newHumanity <= 50 ? 2 : newHumanity <= 70 ? 1 : 0;
+        return {
+          cyberware: newCyberware,
+          humanity: newHumanity,
+          cyberpsychosisLevel: cpLevel
+        };
+      }),
+      getCyberwareBonus: (stat) => {
+        const state = get();
+        return state.cyberware.reduce((total, w) => total + (w.bonuses?.[stat] || 0), 0);
+      },
+      getCyberpsychosisEffects: () => {
+        const state = get();
+        const level = state.cyberpsychosisLevel;
+        return {
+          uiGlitches: level >= 1,
+          hallucinations: level >= 2,
+          forcedReckless: level >= 3,
+          detectionPenalty: level >= 2 ? -2 : level >= 1 ? -1 : 0,
+          evasionPenalty: level >= 2 ? -2 : 0
+        };
+      },
+      updateFactionRep: (faction, amount) => set((state) => {
+        const newRep = { ...state.factionReputation };
+        newRep[faction] = Math.max(-100, Math.min(100, (newRep[faction] || 0) + amount));
+        const vipUnlocked = Object.values(newRep).some(r => r >= 50);
+        return { factionReputation: newRep, vipMarketUnlocked: vipUnlocked };
+      }),
+      getFactionWantedLevel: (faction) => {
+        const state = get();
+        const rep = state.factionReputation[faction] || 0;
+        if (rep <= -50) return 3;
+        if (rep <= -20) return 2;
+        if (rep < 0) return 1;
+        return 0;
+      },
+      getEnemyBonus: (faction) => {
+        const state = get();
+        const rep = state.factionReputation[faction] || 0;
+        if (rep <= -50) return 3;
+        if (rep <= -20) return 2;
+        if (rep < 0) return 1;
+        return 0;
+      },
+      getFactionPerks: (faction) => {
+        const state = get();
+        const rep = state.factionReputation[faction] || 0;
+        return {
+          vipAccess: rep >= 50,
+          discount: rep >= 30 ? 0.2 : rep >= 20 ? 0.1 : 0,
+          iceBuff: rep <= -30 ? Math.abs(rep) / 20 : 0
+        };
+      },
+      resetCharacter: () => set({
+        handle: 'Unknown',
+        int: 8,
+        ref: 6,
+        tech: 5,
+        cool: 5,
+        attr: 5,
+        luck: 5,
+        ma: 6,
+        body: 5,
+        interfaceLvl: 4,
+        programming: 3,
+        funds: 1500,
+        neuralDamage: 0,
+        maxInt: 8,
+        interfaceType: 'default',
+        timelagInterface: false,
+        timelagReflex: false,
+        isProgramming: false,
+        programmingDays: 0,
+        pendingProgram: null,
+        compilationSuccess: null,
+        completedProgram: null,
+        chipStorage: [],
+        chipInstallResult: null,
+        ip: 0,
+        totalIpEarned: 0,
+        housingType: 'apartment',
+        housingCost: 200,
+        daysPassedInMonth: 0,
+        daysPerMonth: 30,
+        isStreet: false,
+        hunger: 100,
+        foodType: 'prepack',
+        starvingDays: 0,
+        freshFoodBonus: null,
+        sleep: 100,
+        stimulants: 0,
+        hoursAwake: 0,
+        isStimulated: false,
+        telecomBill: 0,
+        routingMinutes: 0,
+        hasBodyweightSystem: false,
+        nutrientPacks: 0,
+        isImmersionMode: false,
+        immersionTimer: 0,
+        systemShockActive: false,
+        systemShockHours: 0,
+        immersionHoursTotal: 0,
+        hasDataCreche: false,
+        crecheInstalled: false,
+        videoboardActive: false,
+        externalThreatAlert: false,
+        isFBC: false,
+        hasBiopod: false,
+        currentChassis: null,
+        ownedChassis: [],
+        sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+        maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+        fbcUpgrades: {
+          overclocked: { ref: 0, ma: 0, body: 0 },
+          ccplRetrofit: false,
+          quickMounts: false,
+          hardenedShielding: false
+        },
+        skills: {
+          interface: 4,
+          programming: 3,
+          electronics: 2,
+          cryptography: 1,
+          librarySearch: 2,
+          handgun: 3,
+          brawling: 2
+        },
+        humanity: 100,
+        maxHumanity: 100,
+        cyberware: [],
+        cyberpsychosisLevel: 0,
+        riots: 0,
+        factionReputation: {
+          arasaka: 0,
+          militech: 0,
+          petrochem: 0,
+          biotechnica: 0,
+          eurospace: 0,
+          sovspace: 0
+        },
+        vipMarketUnlocked: false
+      }),
+      createCharacter: (charData) => set({
+        handle: charData.handle || 'Unknown',
+        int: charData.int || 8,
+        ref: charData.ref || 6,
+        tech: charData.tech || 5,
+        cool: charData.cool || 5,
+        attr: charData.attr || 5,
+        luck: charData.luck || 5,
+        ma: charData.ma || 6,
+        body: charData.body || 5,
+        interfaceLvl: charData.skills?.interface || 4,
+        programming: charData.skills?.programming || 3,
+        skills: charData.skills || {
+          interface: 4,
+          programming: 3,
+          electronics: 2,
+          cryptography: 1,
+          librarySearch: 2,
+          handgun: 3,
+          brawling: 2,
+          awareness: 1,
+          basicTech: 1,
+          education: 1,
+          systemKnowledge: 1,
+          cyberTech: 1,
+          cyberdeckDesign: 1,
+          composition: 1
+        },
+        funds: charData.funds || 1500,
+        neuralDamage: 0,
+        maxInt: charData.int || 8,
+        interfaceType: 'default',
+        timelagInterface: false,
+        timelagReflex: false,
+        isProgramming: false,
+        programmingDays: 0,
+        pendingProgram: null,
+        compilationSuccess: null,
+        completedProgram: null,
+        chipStorage: [],
+        chipInstallResult: null,
+        ip: 0,
+        totalIpEarned: 0,
+        housingType: charData.housingType || 'apartment',
+        housingCost: charData.housingCost || 200,
+        daysPassedInMonth: 0,
+        daysPerMonth: 30,
+        isStreet: false,
+        hunger: 100,
+        foodType: 'prepack',
+        starvingDays: 0,
+        freshFoodBonus: null,
+        sleep: 100,
+        stimulants: 0,
+        hoursAwake: 0,
+        isStimulated: false,
+        telecomBill: 0,
+        routingMinutes: 0,
+        hasBodyweightSystem: false,
+        nutrientPacks: 0,
+        isImmersionMode: false,
+        immersionTimer: 0,
+        systemShockActive: false,
+        systemShockHours: 0,
+        immersionHoursTotal: 0,
+        hasDataCreche: false,
+        crecheInstalled: false,
+        videoboardActive: false,
+        externalThreatAlert: false,
+        isFBC: false,
+        hasBiopod: false,
+        currentChassis: null,
+        ownedChassis: [],
+        sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+        maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+        fbcUpgrades: {
+          overclocked: { ref: 0, ma: 0, body: 0 },
+          ccplRetrofit: false,
+          quickMounts: false,
+          hardenedShielding: false
+        },
+        humanity: (charData.emp || 8) * 10,
+        maxHumanity: (charData.emp || 8) * 10,
+        cyberware: [],
+        cyberpsychosisLevel: 0,
+        riots: 0,
+        factionReputation: {
+          arasaka: 0,
+          militech: 0,
+          petrochem: 0,
+          biotechnica: 0,
+          eurospace: 0,
+          sovspace: 0
+        },
+        vipMarketUnlocked: false
+      })
+    }),
+    {
+      name: 'meatspace-storage',
+      version: 6,
+      migrate: (persistedState, version) => {
+        if (version === 0 || version === 1) {
+          return {
+            ...persistedState,
+            neuralDamage: 0,
+            maxInt: persistedState.int || 8,
+            ip: 0,
+            totalIpEarned: 0,
+            timelagInterface: false,
+            timelagReflex: false,
+            skills: {
+              interface: persistedState.interfaceLvl || 4,
+              programming: persistedState.programming || 3,
+              electronics: 2,
+              cryptography: 1,
+              librarySearch: 2,
+              handgun: 3,
+              brawling: 2
+            },
+            humanity: 100,
+            maxHumanity: 100,
+            cyberware: [],
+            cyberpsychosisLevel: 0,
+            riots: 0,
+            factionReputation: {
+              arasaka: 0,
+              militech: 0,
+              petrochem: 0,
+              biotechnica: 0,
+              eurospace: 0,
+              sovspace: 0
+            },
+            vipMarketUnlocked: false
+          };
+        }
+        if (version === 2) {
+          return {
+            ...persistedState,
+            timelagInterface: persistedState.timelagInterface || false,
+            timelagReflex: persistedState.timelagReflex || false,
+            humanity: persistedState.humanity || 100,
+            maxHumanity: persistedState.maxHumanity || 100,
+            cyberware: persistedState.cyberware || [],
+            cyberpsychosisLevel: persistedState.cyberpsychosisLevel || 0,
+            riots: persistedState.riots || 0,
+            factionReputation: {
+              arasaka: 0,
+              militech: 0,
+              petrochem: 0,
+              biotechnica: 0,
+              eurospace: 0,
+              sovspace: 0
+            },
+            vipMarketUnlocked: false
+          };
+        }
+        if (version === 3) {
+          return {
+            ...persistedState,
+            factionReputation: persistedState.factionReputation || {
+              arasaka: 0,
+              militech: 0,
+              petrochem: 0,
+              biotechnica: 0,
+              eurospace: 0,
+              sovspace: 0
+            },
+            vipMarketUnlocked: persistedState.vipMarketUnlocked || false
+          };
+        }
+        if (version === 4) {
+          return {
+            ...persistedState,
+            hasBodyweightSystem: false,
+            nutrientPacks: 0,
+            isImmersionMode: false,
+            immersionTimer: 0,
+            systemShockActive: false,
+            systemShockHours: 0,
+            immersionHoursTotal: 0,
+            hasDataCreche: false,
+            crecheInstalled: false,
+            videoboardActive: false,
+            externalThreatAlert: false
+          };
+        }
+        if (version === 5) {
+          return {
+            ...persistedState,
+            isFBC: false,
+            hasBiopod: false,
+            currentChassis: null,
+            ownedChassis: [],
+            sdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+            maxSdp: { head: 30, lArm: 20, rArm: 20, lLeg: 20, rLeg: 20, torso: 40 },
+            fbcUpgrades: {
+              overclocked: { ref: 0, ma: 0, body: 0 },
+              ccplRetrofit: false,
+              quickMounts: false,
+              hardenedShielding: false
+            }
+          };
+        }
+        return persistedState;
+      }
+    }
   )
 );

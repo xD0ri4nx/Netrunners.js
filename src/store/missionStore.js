@@ -63,9 +63,10 @@ export const useMissionStore = create(
       failPayload: () => set({ activeJob: null, payloadSecured: false }),
       clearJob: () => set({ activeJob: null, payloadSecured: false }),
       abandonJob: () => set({ activeJob: null, payloadSecured: false }),
-      incrementObjectives: () => set((state) => ({
+incrementObjectives: () => set((state) => ({
         activeJob: state.activeJob ? { ...state.activeJob, objectivesCompleted: (state.activeJob.objectivesCompleted || 0) + 1 } : null
-      }))
+      })),
+      resetMissions: () => set({ availableJobs: [], activeJob: null, payloadSecured: false })
     }),
     {
       name: 'mission-storage'

@@ -535,3 +535,28 @@ The player selects a Background Tier from 1 to 5. This permanently sets their st
     * *Starting Funds:* 15,000 eb.
     * *Housing:* Corporate Penthouse (1,000 eb/month, absolute physical security, Trace evasion bonuses).
     * *Gear:* Raven Microcybernetics Deck (Speed +2, MU 15). Pre-loaded with custom Daemons, a full suite of Black ICE counters, and enough raw funds to immediately purchase body modifications or an FBC chassis.
+
+    ### Expansion 23: Deck Hardware Tuning (Overclocking)
+Edgerunners with high Technical ability can rip open their deck's casing in the Safehouse to solder in aftermarket parts, pushing the motherboard past its factory limits.
+
+**23.1 The Tuning Constraints (System Logic)**
+* **Tuning Capacity:** Every cyberdeck has a hidden `tuningLimit` state (typically 2 or 3 max successful upgrades). A cheap Fuchi deck cannot physically support as many aftermarket solders as a high-end Raven Microcybernetics deck. 
+* **Parts Cost:** The player isn't buying a finished product, but they still need to buy the raw silicon and flux. Attempting a tune costs Eurobucks upfront (e.g., 1000eb for Speed parts, 500eb for MU chips) regardless of whether the roll succeeds or fails.
+
+**23.2 The Tuning Roll**
+When the player initiates a tune in the Safehouse UI, the game executes a skill check: `1D10 + TECH + Cyberdeck Design`.
+* **Overclock Speed:** Target Difficulty is 20. Success permanently adds `+1` to the deck's `Speed` stat.
+* **Expand MU:** Target Difficulty is 25. Success permanently adds `+2` to the deck's `maxMu` stat.
+* **Hardwire Defense:** Target Difficulty is 22. Success permanently adds `+1` to the deck's `Data Walls`.
+
+**23.3 The Fumble Table (The "Brick" Risk)**
+To perfectly mimic the *Cyberpunk 2020* TTRPG engine, rolling a natural `1` on the initial D10 is an automatic **Fumble**. If a Fumble occurs, the system automatically rolls a second 1D10 to determine the severity of the catastrophic failure on the Tech Fumble Table:
+
+* **Roll 1-4 (Scorched Traces):** The solder bridges. The upgrade fails, the Eurobucks (parts) are wasted, but the deck survives. 
+* **Roll 5-7 (Blown Capacitors):** The power surge damages the board. The upgrade fails, and the deck instantly takes `40%` damage to its `deckHealth`. The player must use the `[ REPAIR DECK ]` panel before they can safely Netrun again.
+* **Roll 8-9 (Motherboard Warp):** A critical circuit is fried. The upgrade fails, and the deck *permanently* loses `-1 maxMu`. 
+* **Roll 10 (Total Brick):** The motherboard melts into slag. The deck is permanently destroyed (`deckHealth` to 0, unrepairable). The player's `deckModel` is set to `null`, and they are forced to buy a new one from the Afterlife BBS. 
+
+**23.4 Architecture & State Integration**
+* **Store Updates:** Add `tuningCount` and `tuningLimit` to `cyberdeckStore.js`. 
+* **UI Integration:** Add a `[ HARDWARE TUNING ]` button to the Safehouse phase, opening a `TuningPanel` modal. The UI must clearly display the player's current `TECH + Cyberdeck Design` total and the explicit % chance of success and % chance of fumbling before they commit the Eurobucks.
