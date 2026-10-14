@@ -12,11 +12,11 @@ Single-player cyberpunk browser game (no backend). React 19 + Vite 8, deployed t
 | `npm run preview` | Preview production build locally |
 | `npm run deploy` | Builds then pushes `dist/` to `gh-pages` branch |
 
-**No test framework is configured.** No typecheck — this is plain JS/JSX (`"type": "module"`), not TypeScript.
+**No test framework is configured.** TypeScript (strict) — `npm run typecheck`; `npm run build` gates on `tsc --noEmit`. Shared types live in `src/types/game.types.ts`.
 
 ## Architecture
-- **`src/App.jsx`** — Root component. Owns the game phase state machine (XState) and renders all phase views. Also handles shop purchases and raid logic.
-- **`src/machine/gamePhaseMachine.js`** — XState machine. States: `safehouse` (hub) → `navigator` → `jacking_in` → `net` (gameplay). Side branches: `shop`, `jobs`, `raid`.
+- **`src/App.tsx`** — Root component. Owns the game phase state machine (XState) and renders all phase views. Also handles shop purchases and raid logic.
+- **`src/machine/gamePhaseMachine.ts`** — XState machine. States: `safehouse` (hub) → `navigator` → `jacking_in` → `net` (gameplay). Side branches: `shop`, `jobs`, `raid`.
 - **`src/store/`** — Five Zustand stores. `cyberdeckStore`, `meatspaceStore`, and `missionStore` use `persist` middleware → state saved to `localStorage`. Access via `useXStore()` (reactive) or `useXStore.getState()` (imperative).
 - **`src/ecs/world.js`** — Miniplex ECS world. All entities in the Net grid are stored here. `world.clear()` is called on each Net entry.
 - **`src/components/TheNet.jsx`** — The main gameplay: a 15×15 turn-based roguelike grid. Click adjacent cells to move/interact. ICE (enemies) act after each player turn.

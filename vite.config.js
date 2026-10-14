@@ -8,6 +8,5 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  // FIX: Added leading and trailing slashes
   base: '/Netrunners.js/',
 })

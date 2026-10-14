@@ -54,7 +54,7 @@ src/
   utils/         SFX (Web Audio API)
 ```
 
-- **`src/App.jsx`** — Root component owning the XState game phase machine
+- **`src/App.tsx`** — Root component owning the XState game phase machine
 - **`src/machine/gamePhaseMachine.js`** — States: `safehouse` (hub) → `navigator` → `jacking_in` → `net` (gameplay), with side branches: `shop`, `jobs`, `raid`
 - **`src/ecs/world.js`** — Miniplex ECS world; cleared on each Net entry
 - **`src/components/TheNet.jsx`** — Main gameplay: 15×15 turn-based roguelike grid
@@ -63,6 +63,6 @@ src/
 
 ## Notes
 
-- No test framework is configured. No TypeScript — this is plain JS/JSX.
+- No test framework is configured. TypeScript (strict) — `npm run typecheck`; the build gates on `tsc --noEmit`.
 - Vite `base` is set to `'/Netrunners.js/'` for GitHub Pages. Do not change it or the deploy will break.
 - State access: use `useXStore.getState()` in event handlers to avoid stale closures; use `useXStore()` hooks inside render.
