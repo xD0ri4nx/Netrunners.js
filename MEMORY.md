@@ -223,7 +223,7 @@ Completed features:
 ### Phase 11: Black Market Overhaul (Filters & Add-ons)
 * **Shop Filters:** Implemented in v1.17.0. Restructured Black Market with tabbed filters:
     * **SOFTWARE:** All programs with type-based color coding (Anti-ICE=red, Intrusion=orange, Daemon=cyan, etc.)
-    * **CYBERDECKS:** Deck models from sourcebook (Zetatech Paraline, Fuchi Cyber-4, Raven Microcyber, Deckman Portable, Cyber-1 Console)
+    * **CYBERDECKS:** Deck models from sourcebook (Z-Tech Paraline, Fuchi Cyber-4, Raven Microcyber, Deckman Portable, Cyber-1 Console)
     * **ADD-ONS:** Hardware per sourcebook rules:
         * **Cellular Mod** (2500 cr): Launch from orbital LDLs directly, -1 trace risk per jump
         * **Coprocessor Module** (3000 cr): Execute 2 player actions per enemy turn, stacks
@@ -522,7 +522,7 @@ The player selects a Background Tier from 1 to 5. This permanently sets their st
     * *Wealth Tier Value:* 3
     * *Starting Funds:* 3,000 cr.
     * *Housing:* Studio Apartment (200 cr/month).
-    * *Gear:* Zetatech Paraline 5750 (Speed +1, MU 10, Data Walls +4). Good array of basic utilities, *Armor*, and standard Anti-Program ICE.
+    * *Gear:* Z-Tech Paraline 5750 (Speed +1, MU 10, Data Walls +4). Good array of basic utilities, *Armor*, and standard Anti-Program ICE.
 
 * **Tier 4: Corporate Asset (Easy Difficulty)**
     * *Wealth Tier Value:* 4
