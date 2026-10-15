@@ -7,8 +7,8 @@ import { sfx } from '../utils/sfx';
 
 const GRID_SIZE = 8;
 
-const rollD10 = (): number => rollD10();
-const rollLoot = (): number => rollLoot();
+const rollD10 = (): number => Math.floor(Math.random() * 10) + 1;
+const rollLoot = (): number => Math.floor(Math.random() * 500) + 500;
 
 export function InterdictionGrid({ onWin, onEscape, onTimeout }: { onWin: () => void; onEscape: () => void; onTimeout: () => void }) {
   const [playerPos, setPlayerPos] = useState<{ x: number; y: number }>({ x: 4, y: 4 });
@@ -100,7 +100,7 @@ export function InterdictionGrid({ onWin, onEscape, onTimeout }: { onWin: () => 
         if (currentLdl) {
           useRoutingStore.getState().removePatrolAtLdl(currentLdl);
         }
-        addCombatLog(`> TARGET NEUTRALIZED. LOOT: ${loot} CR. TRACE DEFENSE +20.`);
+        addCombatLog(`> TARGET NEUTRALIZED. LOOT: ${loot} cr. TRACE DEFENSE +20.`);
         setTimeout(onWin, 1500);
         return;
       }
@@ -114,178 +114,136 @@ export function InterdictionGrid({ onWin, onEscape, onTimeout }: { onWin: () => 
   };
 
   const enemyTurn = (): void => {
-    if (enemyHP <= 0) return;
-
-    const dist = getDistance(enemyPos, playerPos);
+    const dist = getDistance(playerPos, enemyPos);
     
-    if (stealthProg && dist > 1) {
-      const playerRoll = rollD10();
+    if (dist === 1) {
       const enemyRoll = rollD10();
-      const evasion = playerRoll + int + interfaceLvl + stealthProg.strength + interfaceBonus;
-      const detection = enemyRoll + 5;
-      
-      addCombatLog(`> INVISIBILITY: EVASION(${evasion}) vs DETECTION(${detection})`);
-      
-      if (evasion > detection) {
-        addCombatLog('> STEALTH PREVENTS DETECTION. OPERATIVE PATROLS.');
-      } else {
-        enemyAttack();
-      }
-    } else {
-      enemyAttack();
-    }
-  };
-
-  const enemyAttack = (): void => {
-    const dist = getDistance(enemyPos, playerPos);
-    
-    if (dist > 1) {
-      const newX = playerPos.x > enemyPos.x ? enemyPos.x + 1 : enemyPos.x - 1;
-      const newY = playerPos.y > enemyPos.y ? enemyPos.y + 1 : enemyPos.y - 1;
-      const clampedX = Math.max(0, Math.min(GRID_SIZE - 1, newX));
-      const clampedY = Math.max(0, Math.min(GRID_SIZE - 1, newY));
-      setEnemyPos({ x: clampedX, y: clampedY });
-      addCombatLog('> GRIDSEC OPERATIVE ADVANCING.');
-    } else {
       const playerRoll = rollD10();
-      const enemyRoll = rollD10();
       const enemySTR = 6;
-      
-      const defenseTotal = playerRoll + int + interfaceLvl + (activeAction?.strength || 0) + interfaceBonus;
       const attackTotal = enemyRoll + enemySTR;
-      
-      addCombatLog(`> GRIDSEC ATTACK: D10(${enemyRoll}) + STR(${enemySTR}) = ${attackTotal}`);
-      addCombatLog(`> PLAYER DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + PROG(${activeAction?.strength || 0}) = ${defenseTotal}`);
-      
+      const defenseTotal = playerRoll + int + interfaceLvl + interfaceBonus;
+
+      addCombatLog(`> GRIDSEC COUNTER-ATTACK! D10(${enemyRoll}) + STR(${enemySTR}) = ${attackTotal}`);
+      addCombatLog(`> DEFENSE: D10(${playerRoll}) + INT(${int}) + INTF(${interfaceLvl}) + IFACE(${interfaceBonus}) = ${defenseTotal}`);
+
       if (attackTotal > defenseTotal) {
-        const damage = Math.max(1, attackTotal - defenseTotal);
-        const newHP = playerHP - damage;
-        setPlayerHP(newHP);
-        addCombatLog(`> HIT! YOU TAKE ${damage} NEURAL DAMAGE. (HP: ${newHP}/8)`);
+        sfx.damage();
+        const damage = Math.max(1, Math.floor((attackTotal - defenseTotal) / 2));
+        const newPlayerHP = playerHP - damage;
+        setPlayerHP(newPlayerHP);
+        addCombatLog(`> HIT! SUFFERED ${damage} NEURAL DAMAGE. (HP: ${newPlayerHP}/8)`);
         
-        if (newHP <= 0) {
+        if (newPlayerHP <= 0) {
           sfx.flatline();
-          addCombatLog('> FLATLINE. INTERDICTION FAILED.');
-          useRoutingStore.getState().addTraceRisk(10);
-          setTimeout(onTimeout, 1500);
+          addCombatLog('> CRITICAL SYSTEM FAILURE. DECK DUMPED.');
+          setTimeout(() => {
+            useMeatspaceStore.getState().takeNeuralDamage(5);
+            onEscape();
+          }, 1500);
           return;
         }
       } else {
-        addCombatLog('> DEFENSE SUCCESSFUL. ATTACK BLOCKED.');
+        addCombatLog('> GRIDSEC ATTACK DEFLECTED.');
       }
+    } else {
+      const dx = Math.sign(playerPos.x - enemyPos.x);
+      const dy = Math.sign(playerPos.y - enemyPos.y);
+      
+      if (Math.abs(playerPos.x - enemyPos.x) > Math.abs(playerPos.y - enemyPos.y)) {
+        setEnemyPos(prev => ({ ...prev, x: prev.x + dx }));
+      } else {
+        setEnemyPos(prev => ({ ...prev, y: prev.y + dy }));
+      }
+      addCombatLog('> GRIDSEC OPERATIVE CLOSING DISTANCE...');
     }
-    
+
     setTurnSpent(false);
   };
 
-  const handleTimeout = (): void => {
-    sfx.error();
-    addCombatLog('> TIME EXPIRED. FORCED DISCONNECT.');
-    useRoutingStore.getState().addTraceRisk(10);
-    onTimeout();
+  const handleEscape = (): void => {
+    const roll = rollD10();
+    const stealthBonus = stealthProg ? stealthProg.strength || 2 : 0;
+    const escapeTotal = roll + int + stealthBonus;
+
+    addCombatLog(`> ESCAPE ATTEMPT: D10(${roll}) + INT(${int}) + STEALTH(${stealthBonus}) = ${escapeTotal} vs DC: 14`);
+
+    if (escapeTotal >= 14) {
+      sfx.click();
+      addCombatLog('> EMERGENCY DISCONNECT SUCCESSFUL! SIGNAL TRACED.');
+      useRoutingStore.getState().addTraceRisk(3);
+      setTimeout(onEscape, 1000);
+    } else {
+      sfx.error();
+      addCombatLog('> DISCONNECT FAILED! GRIDSEC INTERCEPTION ACTIVE.');
+      setTurnSpent(true);
+      setTimeout(enemyTurn, 500);
+    }
   };
 
-  const handleEscape = (): void => {
-    sfx.click();
-    useRoutingStore.getState().addTraceRisk(5);
-    addCombatLog('> EMERGENCY DISCONNECT. TRACING INCOMPLETE. +5 RISK.');
-    onEscape();
+  const handleTimeout = (): void => {
+    sfx.loot();
+    addCombatLog('> TRACE DILUTED! TIME WINDOW EXPIRED. SURVIVED INTERDICTION.');
+    useRoutingStore.getState().addTraceDefense(10);
+    setTimeout(onTimeout, 1000);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4">
-      <div className="border-2 border-red-500 p-4 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-red-500 tracking-widest">[!] GRIDSEC INTERDICTION [!]</h2>
-          <div className="text-red-400 font-bold">TURNS: {turnCount}/{maxTurns}</div>
+    <div className="flex flex-col items-center w-full max-w-2xl bg-black/95 border-2 border-red-500 p-4 shadow-[0_0_30px_#ff003340] z-50">
+      <div className="flex justify-between items-center w-full border-b border-red-500/50 pb-2 mb-4">
+        <h2 className="text-xl font-bold tracking-widest text-red-500 animate-pulse">GRIDSEC INTERDICTION</h2>
+        <div className="flex gap-4 text-xs font-bold font-mono">
+          <span className="text-neon-green">RUNNER HP: {playerHP}/8</span>
+          <span className="text-red-400">OPERATIVE HP: {enemyHP}/10</span>
+          <span className="text-yellow-400">TURNS: {turnCount}/{maxTurns}</span>
         </div>
+      </div>
 
-        <div className="text-xs text-gray-400 mb-2">
-          SURVIVE {maxTurns} TURNS OR DEFEAT THE OPERATIVE TO ESCAPE
-        </div>
+      <div className="grid grid-cols-8 gap-1 bg-black/60 p-2 border border-red-500/30 mb-4 select-none">
+        {Array.from({ length: GRID_SIZE }).map((_, y) => (
+          Array.from({ length: GRID_SIZE }).map((_, x) => {
+            const isPlayer = playerPos.x === x && playerPos.y === y;
+            const isEnemy = enemyPos.x === x && enemyPos.y === y;
+            const inRange = getDistance({ x, y }, playerPos) === 1;
 
-        <div className="grid grid-cols-8 gap-0.5 bg-gray-900 p-1 mb-4">
-          {Array(GRID_SIZE).fill(null).map((_, y) => (
-            Array(GRID_SIZE).fill(null).map((_, x) => {
-              const isPlayer = playerPos.x === x && playerPos.y === y;
-              const isEnemy = enemyPos.x === x && enemyPos.y === y;
-              const dist = getDistance({ x, y }, enemyPos);
-              const inRange = dist <= 2;
-              
-              return (
-                <div
-                  key={`${x}-${y}`}
-                  className={`w-8 h-8 flex items-center justify-center text-xs font-bold
-                    ${isPlayer ? 'bg-green-600 text-black' : ''}
-                    ${isEnemy ? 'bg-red-600 text-black animate-pulse' : ''}
-                    ${!isPlayer && !isEnemy && inRange ? 'bg-red-900/30' : 'bg-gray-800'}
-                  `}
-                  onClick={() => {
-                    if (isAdjacent()) handleCombat();
-                  }}
-                >
-                  {isPlayer ? '@' : isEnemy ? 'N' : inRange ? '!' : '.'}
-                </div>
-              );
-            })
-          ))}
-        </div>
+            return (
+              <div
+                key={`${x}-${y}`}
+                onClick={() => inRange && !turnSpent ? handlePlayerMove(x - playerPos.x, y - playerPos.y) : null}
+                className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center font-mono font-bold text-sm border transition-colors
+                  ${isPlayer ? 'bg-green-600 text-black border-neon-green shadow-[0_0_10px_#00ffcc]' : ''}
+                  ${isEnemy ? 'bg-red-600 text-black border-red-500 shadow-[0_0_10px_#ff0033]' : ''}
+                  ${!isPlayer && !isEnemy && inRange ? 'bg-red-900/30 border-red-500/50 hover:bg-red-900/50 cursor-pointer' : 'bg-gray-900/40 border-gray-800'}
+                `}
+              >
+                {isPlayer ? '@' : isEnemy ? 'N' : inRange ? '!' : '.'}
+              </div>
+            );
+          })
+        ))}
+      </div>
 
-        <div className="flex justify-between mb-4 text-xs">
-          <div className="text-green-400">YOUR HP: {playerHP}/8</div>
-          <div className="text-red-400">OPERATIVE HP: {enemyHP}/10</div>
-        </div>
+      <div className="w-full flex gap-2 mb-4">
+        <button
+          onClick={handleCombat}
+          disabled={turnSpent || !isAdjacent()}
+          className="flex-1 bg-red-950 border border-red-500 text-red-400 py-2 font-mono font-bold hover:bg-red-900 hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          [ EXECUTE OFFENSIVE ICE ]
+        </button>
+        <button
+          onClick={handleEscape}
+          disabled={turnSpent}
+          className="flex-1 bg-yellow-950 border border-yellow-500 text-yellow-400 py-2 font-mono font-bold hover:bg-yellow-900 hover:text-black transition-colors disabled:opacity-40 cursor-pointer"
+        >
+          [ EMERGENCY SLIP (DC: 14) ]
+        </button>
+      </div>
 
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => handlePlayerMove(-1, 0)}
-            disabled={turnSpent}
-            className="px-3 py-1 border border-neon-green text-neon-green disabled:opacity-30 text-xs"
-          >
-            ← MOVE
-          </button>
-          <button
-            onClick={() => handlePlayerMove(0, -1)}
-            disabled={turnSpent}
-            className="px-3 py-1 border border-neon-green text-neon-green disabled:opacity-30 text-xs"
-          >
-            ↑ MOVE
-          </button>
-          <button
-            onClick={() => handlePlayerMove(0, 1)}
-            disabled={turnSpent}
-            className="px-3 py-1 border border-neon-green text-neon-green disabled:opacity-30 text-xs"
-          >
-            ↓ MOVE
-          </button>
-          <button
-            onClick={() => handlePlayerMove(1, 0)}
-            disabled={turnSpent}
-            className="px-3 py-1 border border-neon-green text-neon-green disabled:opacity-30 text-xs"
-          >
-            MOVE →
-          </button>
-          <button
-            onClick={handleCombat}
-            disabled={turnSpent || !isAdjacent()}
-            className="px-3 py-1 border border-red-500 text-red-500 disabled:opacity-30 text-xs"
-          >
-            ATTACK
-          </button>
-          <button
-            onClick={handleEscape}
-            className="px-3 py-1 border border-yellow-500 text-yellow-500 text-xs"
-          >
-            ESCAPE (+5 RISK)
-          </button>
-        </div>
-
-        <div className="h-32 overflow-y-auto bg-black border border-gray-700 p-2 text-xs font-mono">
-          {combatLog.map((msg, i) => (
-            <div key={i} className="text-neon-green">{msg}</div>
-          ))}
-          <div ref={logEndRef} />
-        </div>
+      <div className="w-full h-32 bg-black/80 border border-red-500/30 p-2 overflow-y-auto font-mono text-xs text-red-400 space-y-1">
+        {combatLog.map((log, idx) => (
+          <div key={idx} className="opacity-90">{log}</div>
+        ))}
+        <div ref={logEndRef} />
       </div>
     </div>
   );

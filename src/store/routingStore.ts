@@ -4,8 +4,11 @@ import { useCyberdeckStore } from "./cyberdeckStore";
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useMeatspaceStore } from './meatspaceStore';
+import { LDL_DATABASE } from '../data/ldlDatabase';
 
-const EARTH_LDLS = ['ldl_seattle', 'ldl_nightcity', 'ldl_chicago', 'ldl_ny', 'ldl_la', 'ldl_atlanta', 'ldl_detroit', 'ldl_boston', 'ldl_denver', 'ldl_houston', 'ldl_miami', 'ldl_phoenix', 'ldl_portland', 'ldl_sandiego', 'ldl_tampa', 'ldl_london', 'ldl_paris', 'ldl_berlin', 'ldl_rome', 'ldl_madrid', 'ldl_amsterdam', 'ldl_stockholm', 'ldl_vienna', 'ldl_prague', 'ldl_warsaw', 'ldl_helsinki', 'ldl_dublin', 'ldl_brussels', 'ldl_zurich', 'ldl_munich', 'ldl_milan', 'ldl_barcelona', 'ldl_lisbon', 'ldl_copenhagen', 'ldl_athens', 'ldl_bucharest', 'ldl_moscow', 'ldl_kiev', 'ldl_stpetersburg', 'ldl_minsk', 'ldl_istanbul', 'ldl_ankara', 'ldl_cairo', 'ldl_johannesburg', 'ldl_nairobi', 'ldl_lagos', 'ldl_kinshasa', 'ldl_luanda', 'ldl_addisababa', 'ldl_dakar', 'ldl_accra', 'ldl_tunis', 'ldl_algiers', 'ldl_casablanca', 'ldl_maputo', 'ldl_kampala', 'ldl_hongkong', 'ldl_tokyo', 'ldl_seoul', 'ldl_taipei', 'ldl_shanghai', 'ldl_beijing', 'ldl_mumbai', 'ldl_bangkok', 'ldl_manila', 'ldl_singapore', 'ldl_jakarta', 'ldl_kualalumpur', 'ldl_saigon', 'ldl_kolkata', 'ldl_delhi', 'ldl_bangalore', 'ldl_chennai', 'ldl_hyderabad', 'ldl_riyadh', 'ldl_tehran', 'ldl_dubai', 'ldl_abadan', 'ldl_baghdad', 'ldl_telaviv', 'ldl_kuwait', 'ldl_doha', 'ldl_bahrain', 'ldl_kyoto', 'ldl_osaka', 'ldl_nagoya', 'ldl_fukuoka', 'ldl_yokohama', 'ldl_hiroshima', 'ldl_sapporo', 'ldl_kobe'];
+const EARTH_LDLS = Object.keys(LDL_DATABASE).filter(
+  (id) => LDL_DATABASE[id].region === 'earth' && LDL_DATABASE[id].isMain
+);
 
 interface RoutingState {
   cyclerOpen: boolean;

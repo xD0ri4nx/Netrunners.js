@@ -7,8 +7,17 @@ import { useCyberdeckStore } from '../store/cyberdeckStore';
 import { useMeatspaceStore } from '../store/meatspaceStore';
 import { LDL_DATABASE, CORP_THEMES, getSubNodes } from '../data/ldlDatabase';
 import { sfx } from '../utils/sfx';
-const rollD10 = (): number => rollD10();
-const rollD6 = (): number => rollD6();
+
+const rollD10 = (): number => Math.floor(Math.random() * 10) + 1;
+const rollD6 = (): number => Math.floor(Math.random() * 6) + 1;
+
+const TARGET_LOCATION_TO_NODE: Record<TargetLocation, string> = {
+  EARTH: 'neo_ny',
+  GEO_ORBIT: 'leo_dock',
+  APEX_RING: 'crystal_pal',
+  LUNA: 'luna_tycho',
+  MARS: 'mars_chryse',
+};
 
 export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () => void; onAbort: () => void; onIntercept?: () => void }) {
   const [activeRegion, setActiveRegion] = useState<string>('na');
@@ -68,6 +77,10 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
   const nextCyclerMins = useRoutingStore(state => state.nextCyclerMins);
   const gridsecPatrols = useRoutingStore(state => state.gridsecPatrols);
   const addTraceRisk = useRoutingStore(state => state.addTraceRisk);
+
+  const equippedIconTier = useMeatspaceStore((state) => state.equippedIconTier) || 'SIMPLE';
+  const playerHandle = useMeatspaceStore((state) => state.handle) || 'RUNNER';
+  const activeRole: PlayerRole = mpStore.role || selectedRole || 'NETRUNNER';
 
   const isCellular = useCyberdeckStore(state => state.isCellular);
 
@@ -174,6 +187,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
   const handleNodeClick = (targetId: string) => {
     sfx.click();
     const target = LDL_DATABASE[targetId];
+    if (!target) return;
     
     const subNodesForLdl = getSubNodes(targetId);
     if (!currentLdl && subNodesForLdl.length > 0) {
@@ -236,13 +250,17 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     }
 
     const current = LDL_DATABASE[currentLdl];
+    if (!current) return;
 
     if (routeHistory.includes(targetId)) {
       addLog("> ERROR: NODE ALREADY IN ROUTE PATH.");
       return;
     }
 
-    const distance = Math.sqrt(Math.pow(target.x - current.x, 2) + Math.pow(target.y - current.y, 2));
+    const currentEffective = (current.parentLdl && LDL_DATABASE[current.parentLdl]) ? LDL_DATABASE[current.parentLdl] : current;
+    const targetEffective = (target.parentLdl && LDL_DATABASE[target.parentLdl]) ? LDL_DATABASE[target.parentLdl] : target;
+
+    const distance = Math.hypot(targetEffective.x - currentEffective.x, targetEffective.y - currentEffective.y);
     if (distance > 5.8) { 
       sfx.error();
       addLog("> DISTANCE EXCEEDS 5 SPACES. INTERMEDIATE LDL REQUIRED.");
@@ -305,9 +323,14 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     }
   };
 
+  const remoteSysopNodeId = mpStore.sessionState
+    ? TARGET_LOCATION_TO_NODE[mpStore.sessionState.targetLocation]
+    : null;
+  const remoteRunnerNodeId = currentLdl || 'night_city';
+
   return (
     <div className="flex flex-col items-center w-full h-full max-w-4xl bg-black/90 border-2 border-neon-green p-4 shadow-[0_0_30px_#00ffcc40] z-50">
-      <div className="flex justify-between items-center w-full border-b border-neon-green pb-2 mb-4">
+      <div className="flex justify-between items-center w-full border-b border-neon-green pb-2 mb-3">
         <h2 className="text-xl font-bold tracking-widest text-shadow-glow">NAVIGATOR {isSpaceMap ? 'V1.5 - ORBITAL' : 'V1.4'}</h2>
         <div className="flex gap-4 text-xs sm:text-sm font-bold items-center">
           {isAldrinCyclerActive && (
@@ -331,11 +354,12 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
           <span className="text-red-500 animate-pulse">RISK: {traceRisk}</span>
           {isSpaceMap && (
             <span className={cyclerOpen ? 'text-green-400' : 'text-yellow-400 animate-pulse'}>
-              CYCLER: {cyclerOpen ? 'IN POSITION — BOARDING' : `T-${nextCyclerMins} MIN`}
+              CYCLER: {cyclerOpen ? 'IN POSITION - BOARDING' : `T-${nextCyclerMins} MIN`}
             </span>
           )}
         </div>
       </div>
+
       {showMultiplayer && (
         <div className="w-full border-2 border-purple-500/60 bg-black/95 p-3 mb-3 text-xs z-50">
           <div className="flex justify-between items-center border-b border-purple-500/30 pb-2 mb-2 font-bold text-purple-400">
@@ -434,6 +458,37 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
         </div>
       )}
 
+      {/* NETMAP INDICATOR LEGEND */}
+      <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 mb-2 bg-black/80 border border-neon-green/30 text-[10px] font-mono select-none">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-gray-400 font-bold tracking-wider">NETMAP INDICATORS:</span>
+          <span className="inline-flex items-center gap-1 text-neon-green font-bold">
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm bg-neon-green/30 border border-neon-green text-[9px] leading-none text-neon-green">
+              {equippedIconTier === 'FRACTAL' ? '◇' : equippedIconTier === 'PHOTOREALISTIC' ? '◈' : equippedIconTier === 'SUPERREALISTIC' ? '◆' : '▪'}
+            </span>
+            RUNNER [{equippedIconTier}]
+          </span>
+          <span className="inline-flex items-center gap-1 text-yellow-400 font-bold">
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm bg-yellow-950 border border-yellow-400 text-[9px] leading-none text-yellow-400">§</span>
+            SYSOP
+          </span>
+          <span className="inline-flex items-center gap-1 text-red-400 font-bold">
+            <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-ping mr-0.5"></span>
+            PATROL
+          </span>
+          <span className="inline-flex items-center gap-1 text-purple-400 font-bold">
+            <span className="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
+            FERAL ICE
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-gray-400">ACTIVE ROLE:</span>
+          <span className={`px-1.5 py-0.2 border font-bold ${activeRole === 'SYSOP' ? 'border-yellow-400 text-yellow-400 bg-yellow-950/40' : 'border-neon-green text-neon-green bg-green-950/40'}`}>
+            {activeRole}
+          </span>
+        </div>
+      </div>
+
       {/* REGION TABS */}
       <div className="w-full flex flex-wrap gap-2 mb-4">
         {REGION_TABS.map(tab => (
@@ -463,6 +518,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
             if (index === 0) return null;
             const prev = LDL_DATABASE[routeHistory[index - 1]];
             const curr = LDL_DATABASE[id];
+            if (!prev || !curr) return null;
             const prevIsSpace = prev.region === 'orbit' || prev.region === 'luna' || prev.region === 'mars';
             const currIsSpace = curr.region === 'orbit' || curr.region === 'luna' || curr.region === 'mars';
             if (isSpaceMap && !(prevIsSpace && currIsSpace)) return null;
@@ -486,35 +542,132 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
           const isVisited = routeHistory.includes(node.id);
           const isActiveRegion = node.group === activeRegion;
           const hasPatrol = !!gridsecPatrols[node.id];
-
           const isSpaceRegion = node.region === 'orbit' || node.region === 'luna' || node.region === 'mars';
-              const xPos = isSpaceMap ? spaceX(node.x) : earthX(node.x);
-              const yPos = isSpaceMap ? spaceY(node.y) : earthY(node.y);
-              return (
-                <div 
-                  key={node.id}
-                  onClick={() => isActiveRegion ? handleNodeClick(node.id) : null}
-                  className={`absolute w-4 h-4 -ml-2 -mt-2 rounded-full transition-all z-20 
-                    ${isActiveRegion ? 'pointer-events-auto hover:scale-150 cursor-pointer' : 'pointer-events-none opacity-20'}
-                    ${node.isGhostTown ? 'bg-purple-900 border-2 border-purple-500 animate-pulse' :
-                      isCurrent ? 'bg-white shadow-[0_0_15px_#ffffff] animate-pulse opacity-100' : 
-                      isVisited ? 'bg-green-700 opacity-100' : 
-                      isSpaceRegion ? 'bg-blue-400 hover:bg-white' : 'bg-neon-green hover:bg-white'}
-                  `}
-                  style={{ left: `${xPos}%`, top: `${yPos}%` }}
-                title={`${node.name}\nSec: ${node.sec}${node.corp && CORP_THEMES[node.corp] ? '\nCorp: ' + CORP_THEMES[node.corp].name : ''}${node.isGhostTown ? '\nGHOST TOWN: Feral ICE' : ''}${hasPatrol ? '\n[!] GRIDSEC PATROL' : ''}`}
-              >
-                {hasPatrol && (
-                  <span className="absolute -inset-1 rounded-full border-2 border-red-500 animate-ping pointer-events-none" />
+
+          const isRemoteSysop = Boolean(
+            mpStore.sessionId &&
+            mpStore.sessionState?.sysopConnected &&
+            activeRole === 'NETRUNNER' &&
+            node.id === remoteSysopNodeId
+          );
+          const isRemoteRunner = Boolean(
+            mpStore.sessionId &&
+            mpStore.sessionState?.runnerConnected &&
+            activeRole === 'SYSOP' &&
+            node.id === remoteRunnerNodeId
+          );
+
+          const xPos = isSpaceMap ? spaceX(node.x) : earthX(node.x);
+          const yPos = isSpaceMap ? spaceY(node.y) : earthY(node.y);
+
+          return (
+            <div 
+              key={node.id}
+              onClick={() => {
+                if (node.group && node.group !== activeRegion) {
+                  setActiveRegion(node.group);
+                }
+                handleNodeClick(node.id);
+              }}
+              className={`absolute transition-all z-20 cursor-pointer pointer-events-auto
+                ${isActiveRegion ? 'opacity-100 hover:scale-125' : 'opacity-40 hover:opacity-100 hover:scale-110'}
+              `}
+              style={{ left: `${xPos}%`, top: `${yPos}%` }}
+              title={`${node.name}\nSec: ${node.sec}${node.corp && CORP_THEMES[node.corp] ? '\nCorp: ' + CORP_THEMES[node.corp].name : ''}${node.isGhostTown ? '\nGHOST TOWN: Feral ICE' : ''}${hasPatrol ? '\n[!] GRIDSEC PATROL' : ''}`}
+            >
+              {/* Node Base Marker */}
+              <div className={`w-4 h-4 -ml-2 -mt-2 rounded-full transition-all flex items-center justify-center
+                ${node.isGhostTown ? 'bg-purple-900 border-2 border-purple-500 animate-pulse' :
+                  isCurrent ? (activeRole === 'SYSOP' ? 'bg-yellow-400 shadow-[0_0_15px_#f59e0b]' : 'bg-white shadow-[0_0_15px_#00ffcc]') : 
+                  isVisited ? 'bg-green-700 opacity-90' : 
+                  isSpaceRegion ? 'bg-blue-400 hover:bg-white' : 'bg-neon-green hover:bg-white'}
+              `}>
+                {isCurrent && (
+                  <span className="text-[9px] font-bold leading-none select-none text-black">
+                    {activeRole === 'SYSOP' ? '§' : (
+                      equippedIconTier === 'FRACTAL' ? '◇' :
+                      equippedIconTier === 'PHOTOREALISTIC' ? '◈' :
+                      equippedIconTier === 'SUPERREALISTIC' ? '◆' : '▪'
+                    )}
+                  </span>
                 )}
-                {hasPatrol && (
-                  <span className="absolute -inset-1 rounded-full border border-red-500 pointer-events-none" />
-                )}
-                <span className={`absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap font-mono font-bold text-[10px] sm:text-xs ${node.isGhostTown ? 'text-purple-300' : 'text-neon-green'} drop-shadow-md pointer-events-none ${isActiveRegion ? 'opacity-100 bg-black/70 px-1' : 'opacity-0'}`}>
-                  {node.name}
-                </span>
               </div>
-            );
+
+              {/* LOCAL PLAYER INDICATOR BADGE & AURA */}
+              {isCurrent && (
+                <>
+                  {activeRole === 'NETRUNNER' ? (
+                    <>
+                      {equippedIconTier === 'SIMPLE' && (
+                        <span className="absolute -inset-2.5 rounded-sm border-2 border-neon-green animate-ping pointer-events-none" />
+                      )}
+                      {equippedIconTier === 'FRACTAL' && (
+                        <span className="absolute -inset-3 rotate-45 border-2 border-cyan-400 animate-pulse pointer-events-none shadow-[0_0_10px_#00e5ff]" />
+                      )}
+                      {equippedIconTier === 'PHOTOREALISTIC' && (
+                        <>
+                          <span className="absolute -inset-3 rounded-full border border-dashed border-purple-400 animate-spin pointer-events-none" />
+                          <span className="absolute -inset-2 rounded-full border border-cyan-400 animate-ping pointer-events-none" />
+                        </>
+                      )}
+                      {equippedIconTier === 'SUPERREALISTIC' && (
+                        <>
+                          <span className="absolute -inset-3.5 rounded-full border-2 border-yellow-400 shadow-[0_0_15px_#fbbf24] animate-pulse pointer-events-none" />
+                          <span className="absolute -inset-2 rounded-full border border-neon-green animate-ping pointer-events-none" />
+                        </>
+                      )}
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/95 border border-neon-green px-1.5 py-0.5 text-[9px] font-mono font-bold text-neon-green shadow-[0_0_12px_#00ffcc50] pointer-events-none z-30">
+                        [YOU: RUNNER // {playerHandle} ({equippedIconTier})]
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="absolute -inset-3 rounded-sm border-2 border-yellow-400 animate-ping pointer-events-none" />
+                      <span className="absolute -inset-2 border border-yellow-500 shadow-[0_0_12px_#f59e0b] pointer-events-none" />
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/95 border border-yellow-400 px-1.5 py-0.5 text-[9px] font-mono font-bold text-yellow-400 shadow-[0_0_12px_#f59e0b50] pointer-events-none z-30">
+                        [YOU: SYSOP // {playerHandle} (SEC-CONSOLE)]
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* REMOTE SYSOP INDICATOR (MULTIPLAYER) */}
+              {isRemoteSysop && (
+                <>
+                  <span className="absolute -inset-3.5 rounded-sm border-2 border-red-500 animate-ping pointer-events-none" />
+                  <span className="absolute -inset-2 border-2 border-dashed border-amber-500 pointer-events-none animate-spin" />
+                  <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/95 border border-red-500 px-1.5 py-0.5 text-[9px] font-mono font-bold text-red-400 shadow-[0_0_12px_#ef444450] pointer-events-none z-30 animate-pulse">
+                    [HOSTILE SYSOP // DEFENDING]
+                  </div>
+                </>
+              )}
+
+              {/* REMOTE RUNNER INDICATOR (MULTIPLAYER) */}
+              {isRemoteRunner && (
+                <>
+                  <span className="absolute -inset-3.5 rounded-full border-2 border-cyan-400 animate-ping pointer-events-none" />
+                  <span className="absolute -inset-2 border border-cyan-300 pointer-events-none" />
+                  <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/95 border border-cyan-400 px-1.5 py-0.5 text-[9px] font-mono font-bold text-cyan-300 shadow-[0_0_12px_#06b6d450] pointer-events-none z-30 animate-pulse">
+                    [INTRUDER RUNNER // BREACHING]
+                  </div>
+                </>
+              )}
+
+              {/* Gridsec Patrol Indicator */}
+              {hasPatrol && (
+                <>
+                  <span className="absolute -inset-2 rounded-full border-2 border-red-500 animate-ping pointer-events-none" />
+                  <span className="absolute -inset-1 rounded-full border border-red-500 pointer-events-none" />
+                </>
+              )}
+
+              {/* City/Node Name Label */}
+              <span className={`absolute left-5 top-1/2 -translate-y-1/2 whitespace-nowrap font-mono font-bold text-[10px] sm:text-xs pointer-events-none ${node.isGhostTown ? 'text-purple-300' : 'text-neon-green'} drop-shadow-md ${isActiveRegion || isCurrent || isRemoteSysop || isRemoteRunner ? 'opacity-100 bg-black/80 px-1 border border-neon-green/20' : 'opacity-0'}`}>
+                {node.name}
+              </span>
+            </div>
+          );
         })}
 
         {/* Atmosphere Decor Layer (Only visible in SPACE tab) */}
@@ -527,13 +680,13 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                <span className="absolute text-[10px] sm:text-xs font-bold text-blue-400 bg-black/70 px-1 pointer-events-none">ORBITAL STATIONS</span>
             </div>
             <div className="absolute top-[59%] w-full border-t-2 border-dashed border-purple-400 pointer-events-none z-10">
-               <span className="absolute text-[10px] sm:text-xs font-bold text-purple-400 bg-black/70 px-1 pointer-events-none">APEX ORBITAL RING — CISLUNAR GATE</span>
+               <span className="absolute text-[10px] sm:text-xs font-bold text-purple-400 bg-black/70 px-1 pointer-events-none">APEX ORBITAL RING - CISLUNAR GATE</span>
             </div>
             <div className="absolute top-[75%] w-full border-t-2 border-dashed border-gray-300 pointer-events-none z-10">
                <span className="absolute text-[10px] sm:text-xs font-bold text-gray-200 bg-black/70 px-1 pointer-events-none">LUNA</span>
             </div>
             <div className="absolute top-[90%] w-full border-t-2 border-dashed border-red-500 pointer-events-none z-10">
-               <span className="absolute text-[10px] sm:text-xs font-bold text-red-400 bg-black/70 px-1 pointer-events-none">MARS — CYCLER {cyclerOpen ? 'IN POSITION' : `T-${nextCyclerMins} MIN`}</span>
+               <span className="absolute text-[10px] sm:text-xs font-bold text-red-400 bg-black/70 px-1 pointer-events-none">MARS - CYCLER {cyclerOpen ? 'IN POSITION' : `T-${nextCyclerMins} MIN`}</span>
             </div>
           </>
         )}
@@ -592,7 +745,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                   setStartingLdl(selectedMainLdl);
                   addLog(`> ROUTING INITIATED AT ${target.name.toUpperCase()}.`);
                 }}
-                className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors"
+                className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer"
               >
                 [ MAIN GRID ]
               </button>
@@ -602,7 +755,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                   setShowSubNodes(false);
                   setSelectedMainLdl(null);
                 }}
-                className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors"
+                className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors cursor-pointer"
               >
                 [ CANCEL ]
               </button>

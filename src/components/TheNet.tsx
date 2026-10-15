@@ -1,3 +1,4 @@
+import { useMultiplayerStore } from '../store/multiplayerStore';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { world } from '../ecs/world';
 import { useTerminalStore } from '../store/terminalStore';
@@ -138,10 +139,41 @@ export function TheNet({ onJackOut }: { onJackOut: () => void }) {
     };
     shuffle(floors);
 
+    const activeRole = useMultiplayerStore.getState().role || 'NETRUNNER';
+    const iconTier = useMeatspaceStore.getState().equippedIconTier || 'SIMPLE';
+
+    let playerChar = '@';
+    let playerColor = 'text-neon-green';
+
+    if (activeRole === 'SYSOP') {
+      playerChar = '§';
+      playerColor = 'text-yellow-400';
+    } else {
+      switch (iconTier) {
+        case 'FRACTAL':
+          playerChar = '◇';
+          playerColor = 'text-cyan-400';
+          break;
+        case 'PHOTOREALISTIC':
+          playerChar = '◈';
+          playerColor = 'text-purple-300';
+          break;
+        case 'SUPERREALISTIC':
+          playerChar = '◆';
+          playerColor = 'text-yellow-300';
+          break;
+        case 'SIMPLE':
+        default:
+          playerChar = '@';
+          playerColor = 'text-neon-green';
+          break;
+      }
+    }
+
     if (isSubgrid) {
       const midIdx = Math.floor(floors.length / 2);
       const playerPos = floors.splice(midIdx, 1)[0];
-      world.add({ id: 'player', position: playerPos, render: { char: '@', color: 'text-neon-green' }, isPlayer: true });
+      world.add({ id: 'player', position: playerPos, render: { char: playerChar, color: playerColor }, isPlayer: true });
     } else {
       let maxY = 0;
       walls.forEach(w => { if (w.y > maxY) maxY = w.y; });
@@ -155,7 +187,7 @@ export function TheNet({ onJackOut }: { onJackOut: () => void }) {
       });
 
       world.add({ position: gatePos, render: { char: theme ? theme.gateChar : '[', color: theme ? theme.gateColor : 'text-yellow-500' }, isCodeGate: true, isWall: true });
-      world.add({ id: 'player', position: { x: gatePos.x, y: gatePos.y + 1 }, render: { char: '@', color: 'text-neon-green' }, isPlayer: true });
+      world.add({ id: 'player', position: { x: gatePos.x, y: gatePos.y + 1 }, render: { char: playerChar, color: playerColor }, isPlayer: true });
     }
 
     if (floors.length > 0) {
