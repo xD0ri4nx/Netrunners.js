@@ -32,6 +32,7 @@ interface RoutingState {
   removePatrolAtLdl: (ldlId: string) => void;
   setStartingLdl: (id: string) => void;
   jumpToLdl: (id: string, traceDefenseGain: number) => void;
+  backtrackToLdl: (id: string) => void;
   addTraceRisk: (amount: number) => void;
   addTraceDefense: (amount: number) => void;
   setCycler: (open: boolean, mins?: number) => void;
@@ -170,6 +171,34 @@ export const useRoutingStore = create<RoutingState>()(
           routeHistory: [...state.routeHistory, id],
           traceDefense: state.traceDefense + traceDefenseGain,
           interceptionLdl: null
+        };
+      }),
+
+      backtrackToLdl: (id: string) => set((state: RoutingState) => {
+        const targetIndex = state.routeHistory.findIndex(
+          nodeId => nodeId === id || LDL_DATABASE[nodeId]?.parentLdl === id || LDL_DATABASE[id]?.parentLdl === nodeId
+        );
+        if (targetIndex === -1 || targetIndex >= state.routeHistory.length - 1) {
+          return state;
+        }
+
+        const isCellular = useCyberdeckStore.getState().isCellular;
+        let lostDefense = 0;
+        for (let i = targetIndex + 1; i < state.routeHistory.length; i++) {
+          const popped = LDL_DATABASE[state.routeHistory[i]];
+          if (popped) {
+            lostDefense += isCellular ? popped.traceDefense + 1 : popped.traceDefense;
+          }
+        }
+
+        const resolvedId = state.routeHistory[targetIndex];
+        const newHistory = state.routeHistory.slice(0, targetIndex + 1);
+
+        return {
+          currentLdl: resolvedId,
+          routeHistory: newHistory,
+          traceDefense: Math.max(0, state.traceDefense - lostDefense),
+          interceptionLdl: state.gridsecPatrols[resolvedId] ? resolvedId : null
         };
       }),
 

@@ -74,6 +74,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
   const traceRisk = useRoutingStore(state => state.traceRisk);
   const setStartingLdl = useRoutingStore(state => state.setStartingLdl);
   const jumpToLdl = useRoutingStore(state => state.jumpToLdl);
+  const backtrackToLdl = useRoutingStore(state => state.backtrackToLdl);
   const cyclerOpen = useRoutingStore(state => state.cyclerOpen);
   const nextCyclerMins = useRoutingStore(state => state.nextCyclerMins);
   const gridsecPatrols = useRoutingStore(state => state.gridsecPatrols);
@@ -263,6 +264,24 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
       return;
     }
 
+    // Check if target is a previously visited node in routeHistory (BACKTRACKING)
+    const historyIndex = routeHistory.findIndex(
+      id => id === targetId || LDL_DATABASE[id]?.parentLdl === targetId || LDL_DATABASE[targetId]?.parentLdl === id
+    );
+
+    if (historyIndex !== -1 && historyIndex < routeHistory.length - 1) {
+      backtrackToLdl(targetId);
+      sfx.click();
+      addLog(`> RETRACING CIRCUIT TO ${target.name.toUpperCase()}... DOWNSTREAM HOPS RELEASED.`);
+      checkInterception(targetId);
+      return;
+    }
+
+    if (isAtThisNode) {
+      addLog(`> ALREADY CONNECTED TO ${target.name.toUpperCase()}.`);
+      return;
+    }
+
     const deck = useCyberdeckStore.getState();
     const routingState = useRoutingStore.getState();
     const hasOffWorldHardware = deck.hasTightbeamMaser || routingState.completedOrbitalUplink || isCellular;
@@ -319,7 +338,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     if (!current) return;
 
     if (routeHistory.includes(targetId)) {
-      addLog("> ERROR: NODE ALREADY IN ROUTE PATH.");
+      addLog(`> ALREADY CONNECTED TO ${target.name.toUpperCase()}.`);
       return;
     }
 
