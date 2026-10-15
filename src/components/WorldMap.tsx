@@ -234,6 +234,14 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     addLog(`> ROUTING INITIATED AT ${target?.name.toUpperCase() ?? selectedMainLdl.toUpperCase()}.`);
   };
 
+  const handleMainGridClick = () => {
+    if (selectedSubNodeId) {
+      handleGoToMainGrid(selectedSubNodeId);
+    } else {
+      handleParentMainGrid();
+    }
+  };
+
   const handleCancelSubNodes = () => {
     sfx.click();
     setShowSubNodes(false);
@@ -757,9 +765,18 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
       {showSubNodes && selectedMainLdl && (
         <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
           <div className="bg-black border-2 border-neon-green p-6 max-w-md w-full shadow-[0_0_20px_#00ffcc30]">
-            <h3 className="text-lg font-bold text-neon-green mb-2">
-              {LDL_DATABASE[selectedMainLdl]?.name} - SUB-NODES
-            </h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-bold text-neon-green">
+                {LDL_DATABASE[selectedMainLdl]?.name} - SUB-NODES
+              </h3>
+              <button
+                onClick={handleCancelSubNodes}
+                className="text-gray-400 hover:text-neon-green font-bold text-xs px-2 py-0.5 border border-gray-700 hover:border-neon-green transition-colors cursor-pointer"
+                title="Close"
+              >
+                [X]
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mb-4">
               Select a sub-network or access the main corporate grid directly.
             </p>
@@ -771,7 +788,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                     key={subNode.id}
                     onClick={() => {
                       sfx.click();
-                      setSelectedSubNodeId(subNode.id);
+                      setSelectedSubNodeId(selectedSubNodeId === subNode.id ? null : subNode.id);
                     }}
                     className={`w-full text-left p-3 border transition-colors cursor-pointer rounded-sm
                       ${isSelected ? 'border-neon-green bg-neon-green/20 ring-1 ring-neon-green shadow-[0_0_10px_#00ffcc40]' : 
@@ -793,39 +810,14 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                     <div className="text-xs opacity-70">
                       Security: {subNode.sec} {subNode.isWeefle ? '| WEEFLERUNNER GRID' : ''}{subNode.isGhostTown ? '| GHOST TOWN' : ''}
                     </div>
-
-                    {isSelected && (
-                      <div className="flex gap-2 mt-3 pt-2 border-t border-neon-green/30">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRunSubnet(subNode.id);
-                          }}
-                          className="flex-1 bg-neon-green text-black font-bold py-1.5 px-2 text-xs hover:bg-white transition-colors cursor-pointer text-center"
-                        >
-                          [ RUN SUBNET ]
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGoToMainGrid(subNode.id);
-                          }}
-                          className="flex-1 border border-cyan-400 text-cyan-400 font-bold py-1.5 px-2 text-xs hover:bg-cyan-400 hover:text-black transition-colors cursor-pointer text-center"
-                        >
-                          [ GO TO MAIN GRID ]
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex flex-col gap-2">
-              {selectedSubNodeId && (
-                <div className="flex gap-2">
+            <div className="flex gap-2">
+              {selectedSubNodeId ? (
+                <>
                   <button
                     onClick={() => handleRunSubnet(selectedSubNodeId)}
                     className="flex-1 bg-neon-green text-black font-bold py-2 hover:bg-white transition-colors cursor-pointer text-xs sm:text-sm text-center"
@@ -833,27 +825,28 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                     [ RUN SUBNET ]
                   </button>
                   <button
-                    onClick={() => handleGoToMainGrid(selectedSubNodeId)}
-                    className="flex-1 border-2 border-cyan-400 bg-cyan-950/40 text-cyan-400 font-bold py-2 hover:bg-cyan-400 hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                    onClick={handleMainGridClick}
+                    className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
                   >
-                    [ GO TO MAIN GRID ]
+                    [ MAIN GRID ]
                   </button>
-                </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleMainGridClick}
+                    className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                  >
+                    [ MAIN GRID ]
+                  </button>
+                  <button
+                    onClick={handleCancelSubNodes}
+                    className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                  >
+                    [ CANCEL ]
+                  </button>
+                </>
               )}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleParentMainGrid}
-                  className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
-                >
-                  [ MAIN GRID ]
-                </button>
-                <button
-                  onClick={handleCancelSubNodes}
-                  className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors cursor-pointer text-xs sm:text-sm text-center"
-                >
-                  [ CANCEL ]
-                </button>
-              </div>
             </div>
           </div>
         </div>
