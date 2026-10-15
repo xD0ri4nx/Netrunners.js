@@ -31,6 +31,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     const home = useMeatspaceStore.getState().homeLdl || "night_city";
     return getSubNodes(home).length > 0 ? home : null;
   });
+  const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
   const [showSpaceMap, setShowSpaceMap] = useState<boolean>(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -184,14 +185,71 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
     return false;
   };
 
+  const handleRunSubnet = (subNodeId: string) => {
+    sfx.click();
+    const home = useMeatspaceStore.getState().homeLdl || 'night_city';
+    const subNode = LDL_DATABASE[subNodeId];
+    if (!subNode) return;
+    if (subNode.id !== home && subNode.parentLdl !== home) {
+      sfx.error();
+      addLog(`> ERROR: MUST JACK IN FROM PHYSICAL LOCATION (${(LDL_DATABASE[home]?.name ?? home).toUpperCase()}).`);
+      return;
+    }
+    setShowSubNodes(false);
+    setSelectedSubNodeId(null);
+    setStartingLdl(subNode.id);
+    addLog(`> ${subNode.isWeefle ? 'WEEFLERUNNER NODE' : 'SUBNET'} DETECTED. JACKING IN TO ${subNode.name.toUpperCase()}...`);
+    onExecute();
+  };
+
+  const handleGoToMainGrid = (subNodeId: string) => {
+    sfx.click();
+    const home = useMeatspaceStore.getState().homeLdl || 'night_city';
+    const subNode = LDL_DATABASE[subNodeId];
+    if (!subNode) return;
+    if (subNode.id !== home && subNode.parentLdl !== home) {
+      sfx.error();
+      addLog(`> ERROR: MUST JACK IN FROM PHYSICAL LOCATION (${(LDL_DATABASE[home]?.name ?? home).toUpperCase()}).`);
+      return;
+    }
+    setShowSubNodes(false);
+    setSelectedSubNodeId(null);
+    setStartingLdl(subNode.id);
+    addLog(`> SUB-NETWORK SELECTED: ${subNode.name.toUpperCase()}. MAIN GRID ROUTING ACTIVE.`);
+  };
+
+  const handleParentMainGrid = () => {
+    sfx.click();
+    if (!selectedMainLdl) return;
+    const home = useMeatspaceStore.getState().homeLdl || 'night_city';
+    if (selectedMainLdl !== home) {
+      sfx.error();
+      addLog(`> ERROR: MUST JACK IN FROM PHYSICAL LOCATION (${(LDL_DATABASE[home]?.name ?? home).toUpperCase()}).`);
+      return;
+    }
+    setShowSubNodes(false);
+    setSelectedSubNodeId(null);
+    const target = LDL_DATABASE[selectedMainLdl];
+    setStartingLdl(selectedMainLdl);
+    addLog(`> ROUTING INITIATED AT ${target?.name.toUpperCase() ?? selectedMainLdl.toUpperCase()}.`);
+  };
+
+  const handleCancelSubNodes = () => {
+    sfx.click();
+    setShowSubNodes(false);
+    setSelectedSubNodeId(null);
+  };
+
   const handleNodeClick = (targetId: string) => {
     sfx.click();
     const target = LDL_DATABASE[targetId];
     if (!target) return;
     
     const subNodesForLdl = getSubNodes(targetId);
-    if (!currentLdl && subNodesForLdl.length > 0) {
+    const isAtThisNode = currentLdl === targetId || (currentLdl ? LDL_DATABASE[currentLdl]?.parentLdl === targetId : false);
+    if ((!currentLdl || isAtThisNode) && subNodesForLdl.length > 0) {
       setSelectedMainLdl(targetId);
+      setSelectedSubNodeId(currentLdl && LDL_DATABASE[currentLdl]?.parentLdl === targetId ? currentLdl : null);
       setShowSubNodes(true);
       addLog(`> ${target.name.toUpperCase()} DETECTED. SUB-NODES AVAILABLE.`);
       return;
@@ -516,9 +574,11 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
           {routeHistory.map((id, index) => {
             if (index === 0) return null;
-            const prev = LDL_DATABASE[routeHistory[index - 1]];
-            const curr = LDL_DATABASE[id];
-            if (!prev || !curr) return null;
+            const prevRaw = LDL_DATABASE[routeHistory[index - 1]];
+            const currRaw = LDL_DATABASE[id];
+            if (!prevRaw || !currRaw) return null;
+            const prev = (prevRaw.parentLdl && LDL_DATABASE[prevRaw.parentLdl]) ? LDL_DATABASE[prevRaw.parentLdl] : prevRaw;
+            const curr = (currRaw.parentLdl && LDL_DATABASE[currRaw.parentLdl]) ? LDL_DATABASE[currRaw.parentLdl] : currRaw;
             const prevIsSpace = prev.region === 'orbit' || prev.region === 'luna' || prev.region === 'mars';
             const currIsSpace = curr.region === 'orbit' || curr.region === 'luna' || curr.region === 'mars';
             if (isSpaceMap && !(prevIsSpace && currIsSpace)) return null;
@@ -527,7 +587,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
             const currY = isSpaceMap && currIsSpace ? spaceY(curr.y) : earthY(curr.y);
             return (
               <line 
-                key={`${prev.id}-${curr.id}`}
+                key={`${prevRaw.id}-${currRaw.id}`}
                 x1={`${isSpaceMap ? spaceX(prev.x) : earthX(prev.x)}%`} y1={`${prevY}%`} 
                 x2={`${isSpaceMap ? spaceX(curr.x) : earthX(curr.x)}%`} y2={`${currY}%`} 
                 stroke="#00ffcc" strokeWidth="2" opacity="0.6"
@@ -538,8 +598,8 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
 
         {/* Nodes Layer */}
         {ldlNodes.map(node => {
-          const isCurrent = currentLdl === node.id;
-          const isVisited = routeHistory.includes(node.id);
+          const isCurrent = currentLdl === node.id || (currentLdl ? LDL_DATABASE[currentLdl]?.parentLdl === node.id : false);
+          const isVisited = routeHistory.includes(node.id) || routeHistory.some(id => LDL_DATABASE[id]?.parentLdl === node.id);
           const isActiveRegion = node.group === activeRegion;
           const hasPatrol = !!gridsecPatrols[node.id];
           const isSpaceRegion = node.region === 'orbit' || node.region === 'luna' || node.region === 'mars';
@@ -617,7 +677,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                         </>
                       )}
                       <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/95 border border-neon-green px-1.5 py-0.5 text-[9px] font-mono font-bold text-neon-green shadow-[0_0_12px_#00ffcc50] pointer-events-none z-30">
-                        [YOU: RUNNER // {playerHandle} ({equippedIconTier})]
+                        [YOU: RUNNER // {playerHandle} ({currentLdlData?.parentLdl ? currentLdlData.name.toUpperCase() : equippedIconTier})]
                       </div>
                     </>
                   ) : (
@@ -696,69 +756,104 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
       {/* SUB-NODE SELECTION MODAL */}
       {showSubNodes && selectedMainLdl && (
         <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-          <div className="bg-black border-2 border-neon-green p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold text-neon-green mb-4">
+          <div className="bg-black border-2 border-neon-green p-6 max-w-md w-full shadow-[0_0_20px_#00ffcc30]">
+            <h3 className="text-lg font-bold text-neon-green mb-2">
               {LDL_DATABASE[selectedMainLdl]?.name} - SUB-NODES
             </h3>
             <p className="text-xs text-gray-400 mb-4">
               Select a sub-network or access the main corporate grid directly.
             </p>
-            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-              {getSubNodes(selectedMainLdl).map(subNode => (
-                <button
-                  key={subNode.id}
-                  onClick={() => {
-                    sfx.click();
-                    const home = useMeatspaceStore.getState().homeLdl || 'night_city';
-                    if (subNode.id !== home && subNode.parentLdl !== home) {
-                      sfx.error();
-                      addLog(`> ERROR: MUST JACK IN FROM PHYSICAL LOCATION (${(LDL_DATABASE[home]?.name ?? home).toUpperCase()}).`);
-                      return;
-                    }
-                    setShowSubNodes(false);
-                    setStartingLdl(subNode.id);
-                    addLog(`> WEEFLERUNNER NODE DETECTED. JACKING IN TO ${subNode.name.toUpperCase()}...`);
-                  }}
-                  className={`w-full text-left p-3 border transition-colors
-                    ${subNode.isWeefle ? 'border-pink-500/50 hover:bg-pink-900/30 text-pink-300' : 
-                      subNode.isGhostTown ? 'border-purple-500/50 hover:bg-purple-900/30 text-purple-300' : 
-                      'border-neon-green/50 hover:bg-neon-green/20 text-neon-green'}
-                  `}
-                >
-                  <div className="font-bold text-sm">{subNode.name}</div>
-                  <div className="text-xs opacity-70">Security: {subNode.sec} {subNode.isWeefle ? '| WEEFLERUNNER GRID' : ''}{subNode.isGhostTown ? '| GHOST TOWN' : ''}</div>
-                </button>
-              ))}
+            <div className="space-y-2 mb-4 max-h-56 overflow-y-auto pr-1">
+              {getSubNodes(selectedMainLdl).map(subNode => {
+                const isSelected = selectedSubNodeId === subNode.id;
+                return (
+                  <div
+                    key={subNode.id}
+                    onClick={() => {
+                      sfx.click();
+                      setSelectedSubNodeId(subNode.id);
+                    }}
+                    className={`w-full text-left p-3 border transition-colors cursor-pointer rounded-sm
+                      ${isSelected ? 'border-neon-green bg-neon-green/20 ring-1 ring-neon-green shadow-[0_0_10px_#00ffcc40]' : 
+                        subNode.isWeefle ? 'border-pink-500/50 hover:bg-pink-900/30 text-pink-300' : 
+                        subNode.isGhostTown ? 'border-purple-500/50 hover:bg-purple-900/30 text-purple-300' : 
+                        'border-neon-green/50 hover:bg-neon-green/20 text-neon-green'}
+                    `}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className={`font-bold text-sm ${isSelected ? 'text-neon-green' : ''}`}>
+                        {subNode.name}
+                      </div>
+                      {isSelected && (
+                        <span className="text-[10px] uppercase font-bold text-black bg-neon-green px-1.5 py-0.5 rounded-sm">
+                          SELECTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs opacity-70">
+                      Security: {subNode.sec} {subNode.isWeefle ? '| WEEFLERUNNER GRID' : ''}{subNode.isGhostTown ? '| GHOST TOWN' : ''}
+                    </div>
+
+                    {isSelected && (
+                      <div className="flex gap-2 mt-3 pt-2 border-t border-neon-green/30">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRunSubnet(subNode.id);
+                          }}
+                          className="flex-1 bg-neon-green text-black font-bold py-1.5 px-2 text-xs hover:bg-white transition-colors cursor-pointer text-center"
+                        >
+                          [ RUN SUBNET ]
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGoToMainGrid(subNode.id);
+                          }}
+                          className="flex-1 border border-cyan-400 text-cyan-400 font-bold py-1.5 px-2 text-xs hover:bg-cyan-400 hover:text-black transition-colors cursor-pointer text-center"
+                        >
+                          [ GO TO MAIN GRID ]
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  sfx.click();
-                  const home = useMeatspaceStore.getState().homeLdl || 'night_city';
-                  if (selectedMainLdl !== home) {
-                    sfx.error();
-                    addLog(`> ERROR: MUST JACK IN FROM PHYSICAL LOCATION (${(LDL_DATABASE[home]?.name ?? home).toUpperCase()}).`);
-                    return;
-                  }
-                  setShowSubNodes(false);
-                  const target = LDL_DATABASE[selectedMainLdl];
-                  setStartingLdl(selectedMainLdl);
-                  addLog(`> ROUTING INITIATED AT ${target.name.toUpperCase()}.`);
-                }}
-                className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer"
-              >
-                [ MAIN GRID ]
-              </button>
-              <button
-                onClick={() => {
-                  sfx.click();
-                  setShowSubNodes(false);
-                  setSelectedMainLdl(null);
-                }}
-                className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors cursor-pointer"
-              >
-                [ CANCEL ]
-              </button>
+
+            <div className="flex flex-col gap-2">
+              {selectedSubNodeId && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleRunSubnet(selectedSubNodeId)}
+                    className="flex-1 bg-neon-green text-black font-bold py-2 hover:bg-white transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                  >
+                    [ RUN SUBNET ]
+                  </button>
+                  <button
+                    onClick={() => handleGoToMainGrid(selectedSubNodeId)}
+                    className="flex-1 border-2 border-cyan-400 bg-cyan-950/40 text-cyan-400 font-bold py-2 hover:bg-cyan-400 hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                  >
+                    [ GO TO MAIN GRID ]
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleParentMainGrid}
+                  className="flex-1 border border-neon-green text-neon-green py-2 hover:bg-neon-green hover:text-black transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                >
+                  [ MAIN GRID ]
+                </button>
+                <button
+                  onClick={handleCancelSubNodes}
+                  className="flex-1 border border-gray-500 text-gray-400 py-2 hover:bg-gray-800 transition-colors cursor-pointer text-xs sm:text-sm text-center"
+                >
+                  [ CANCEL ]
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -808,7 +903,7 @@ export function WorldMap({ onExecute, onAbort, onIntercept }: { onExecute: () =>
                 ${currentLdl ? 'bg-green-950 text-white border-neon-green hover:bg-neon-green hover:text-black' : 'bg-gray-900 border-gray-700 text-gray-500 cursor-not-allowed'}
               `}
             >
-              [ EXECUTE DATAFORT BREACH ]
+              [ EXECUTE DATAFORT BREACH${currentLdlData ? `: ${currentLdlData.name.toUpperCase()}` : ''} ]
             </button>
           </>
         )}
